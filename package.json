@@ -1,16 +1,37 @@
 {
   "name": "overlaify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Build Twitch/OBS overlays that follow the Overlaify Overlay Spec: start from a template, validate, preview with simulated events and control them live.",
   "type": "module",
-  "bin": { "overlaify": "bin/overlaify.js" },
-  "files": ["bin", "lib", "assets", "skill"],
-  "engines": { "node": ">=18" },
+  "bin": {
+    "overlaify": "bin/overlaify.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "assets",
+    "skill"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "sync": "node scripts/sync.mjs"
   },
-  "keywords": ["twitch", "obs", "overlay", "stream", "alerts", "browser-source", "claude", "skill"],
+  "keywords": [
+    "twitch",
+    "obs",
+    "overlay",
+    "stream",
+    "alerts",
+    "browser-source",
+    "claude",
+    "skill"
+  ],
   "homepage": "https://www.overlaify.com",
-  "repository": { "type": "git", "url": "git+https://github.com/overlaify/overlaify.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/overlaify/overlaify.git"
+  },
   "license": "MIT"
 }
