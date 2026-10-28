@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Neon Webcam Frame</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "x", "label": "Left edge", "type": "range", "default": 1340, "min": 0, "max": 1920, "step": 10, "unit": "px", "group": "Layout", "desc": "Position on the 1920x1080 canvas. Defaults to the bottom-right corner (1920 - width - 60)."},
+    {"key": "y", "label": "Top edge", "type": "range", "default": 670, "min": 0, "max": 1080, "step": 10, "unit": "px", "group": "Layout", "desc": "Defaults to the bottom-right corner (1080 - height - 80)."},
+    {"key": "w", "label": "Width", "type": "range", "default": 520, "min": 160, "max": 1920, "step": 10, "unit": "px", "group": "Layout", "desc": "Match your camera source."},
+    {"key": "h", "label": "Height", "type": "range", "default": 330, "min": 90, "max": 1080, "step": 10, "unit": "px", "group": "Layout"},
+    {"key": "color", "label": "Color 1", "type": "color", "default": "#c6ff3d", "swatches": ["#c6ff3d", "#5ce1ff", "#ff4f8b", "#ffb547", "#ffffff"], "group": "Look", "desc": "First gradient color, also the name tag and alert label."},
+    {"key": "color2", "label": "Color 2", "type": "color", "default": "#9b5cff", "swatches": ["#9b5cff", "#ff4f8b", "#5ce1ff", "#ffb547", "#c6ff3d"], "group": "Look", "desc": "Second gradient color."},
+    {"key": "radius", "label": "Corner radius", "type": "range", "default": 28, "min": 0, "max": 120, "step": 1, "unit": "px", "group": "Look", "desc": "0 for square corners."},
+    {"key": "border", "label": "Border width", "type": "range", "default": 6, "min": 1, "max": 30, "step": 1, "unit": "px", "group": "Look"},
+    {"key": "name", "label": "Name tag", "type": "text", "default": "", "group": "Text", "desc": "Leave empty to use your channel name; 0 hides the tag."},
+    {"key": "alerts", "label": "Flash on events", "type": "toggle", "default": true, "group": "Alerts", "desc": "Follows, subs, gifts, bits and raids make the border glow and show a label."},
+    {"key": "duration", "label": "Label time", "type": "range", "default": 4, "min": 1, "max": 15, "step": 0.5, "unit": "s", "group": "Alerts", "desc": "Seconds each event label stays up."}
+  ]
+}
+</script>
+<style>
+  :root { --c: #c6ff3d; --c2: #9b5cff; --r: 28px; --bw: 6px; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  .frame { position: absolute; border-radius: var(--r); font-family: 'Space Grotesk', system-ui, sans-serif; color: #fff; }
+  /* Animated gradient border: a masked ring, the inside stays fully transparent for the camera. */
+  .ring { position: absolute; inset: calc(var(--bw) * -1); border-radius: calc(var(--r) + var(--bw)); padding: var(--bw);
+    background: conic-gradient(from var(--a, 0deg), var(--c), var(--c2), var(--c), var(--c2), var(--c));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: spin 6s linear infinite; filter: drop-shadow(0 0 14px var(--c)); }
+  .flash .ring { animation: spin 1s linear infinite; filter: drop-shadow(0 0 34px var(--c)) brightness(1.4); }
+  .corner { position: absolute; width: 42px; height: 42px; border: 5px solid #fff; opacity: .85; }
+  .tl { left: 14px; top: 14px; border-right: 0; border-bottom: 0; border-radius: 12px 0 0 0; }
+  .br { right: 14px; bottom: 14px; border-left: 0; border-top: 0; border-radius: 0 0 12px 0; }
+  .tag { position: absolute; left: 22px; bottom: -26px; display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-radius: 14px;
+    background: #0e0b18; border: 2px solid var(--c); font-size: 24px; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  .tag i { width: 12px; height: 12px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 10px #ff3b3b; animation: blink 1.4s infinite; }
+  .toast { position: absolute; right: 18px; top: -30px; padding: 10px 18px; border-radius: 12px; background: var(--c); color: #0b0a10; font-size: 22px; font-weight: 700;
+    white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,.45); opacity: 0; transform: translateY(14px) scale(.9); transition: .35s cubic-bezier(.2,1.4,.4,1); }
+  .toast.on { opacity: 1; transform: none; }
+  @property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+  @keyframes spin { to { --a: 360deg; } }
+  @keyframes blink { 50% { opacity: .3; } }
+</style>
+</head>
+<body>
+<div class="frame" id="frame">
+  <div class="ring"></div><div class="corner tl"></div><div class="corner br"></div>
+  <div class="toast" id="toast"></div>
+  <div class="tag" id="tagbox"><i></i><span id="tag"></span></div>
+</div>
+<script>
+  // Position and size in 1920x1080 pixels: ?x=1380&y=700&w=480&h=320  &radius=28  &color=%23c6ff3d  &color2=%239b5cff
+  // &name=...  (defaults to your channel; name=0 hides the tag)  &alerts=0 turns off the event flash
+  const root = document.documentElement.style;
+  root.setProperty('--c', Overlaify.param('color', '#c6ff3d'));
+  root.setProperty('--c2', Overlaify.param('color2', '#9b5cff'));
+  root.setProperty('--r', Overlaify.param('radius', 28) + 'px');
+  root.setProperty('--bw', Overlaify.param('border', 6) + 'px');
+  const W = Overlaify.param('w', 520), H = Overlaify.param('h', 330);
+  const frame = document.getElementById('frame');
+  Object.assign(frame.style, { left: Overlaify.param('x', 1920 - W - 60) + 'px', top: Overlaify.param('y', 1080 - H - 80) + 'px', width: W + 'px', height: H + 'px' });
+  const name = Overlaify.param('name', Overlaify.channel || 'LIVE');
+  if (name === '0') document.getElementById('tagbox').remove(); else document.getElementById('tag').textContent = name;
+
+  const toast = document.getElementById('toast');
+  const DURATION = Overlaify.param('duration', 4) * 1000;
+  function label(e) {
+    switch (e.type) {
+      case 'follow':   return `+ follow · ${e.name}`;
+      case 'sub':      return e.months > 1 ? `${e.name} · ${e.months} months` : `new sub · ${e.name}`;
+      case 'gift':     return `${e.name} gifted a sub`;
+      case 'giftbomb': return `${e.name} gifted ${e.count}`;
+      case 'cheer':    return `${e.name} · ${e.bits.toLocaleString()} bits`;
+      case 'raid':     return `raid · ${e.name} +${e.viewers.toLocaleString()}`;
+    }
+  }
+  const show = Overlaify.queue(async e => {
+    toast.textContent = label(e);
+    toast.classList.add('on'); frame.classList.add('flash');
+    Overlaify.chime('pop');
+    await Overlaify.sleep(DURATION);
+    toast.classList.remove('on'); frame.classList.remove('flash');
+  }, { gap: 400 });
+  if (Overlaify.param('alerts', true)) ['follow', 'sub', 'gift', 'giftbomb', 'cheer', 'raid'].forEach(t => Overlaify.on(t, show));
+</script>
+</body>
+</html>

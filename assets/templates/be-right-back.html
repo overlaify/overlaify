@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Cozy BRB Screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "tag", "label": "Small heading", "type": "text", "default": "Quick break", "group": "Text"},
+    {"key": "title", "label": "Headline", "type": "text", "default": "Be right back", "group": "Text"},
+    {"key": "text", "label": "Line under the headline", "type": "text", "default": "Stretching, refilling, back in a few. Keep chat warm for me.", "group": "Text"},
+    {"key": "minutes", "label": "Back in", "type": "range", "default": 0, "min": 0, "max": 60, "step": 1, "unit": "min", "desc": "Shows a countdown. 0 counts how long you've been away instead.", "group": "Timing"},
+    {"key": "color", "label": "Accent color", "type": "color", "default": "#ffb547", "swatches": ["#ffb547", "#ff8a5c", "#ff4f8b", "#c6ff3d", "#5ce1ff"], "group": "Look"},
+    {"key": "bg", "label": "Background", "type": "toggle", "default": true, "desc": "Turn off for a transparent background over your own art.", "group": "Look"}
+  ],
+  "actions": [
+    {"name": "backin", "label": "Back in…", "input": {"type": "number", "label": "Minutes", "default": 5, "step": 1, "min": 1}},
+    {"name": "restart", "label": "Restart timer", "style": "secondary"}
+  ]
+}
+</script>
+<style>
+  :root { --c: #ffb547; --ink: #2a1a12; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  .scene { position: absolute; inset: 0; overflow: hidden; color: #fff4e6; font-family: 'DM Sans', system-ui, sans-serif;
+    background: radial-gradient(90% 80% at 70% 30%, #4a2a1c 0%, #22140f 55%, #120b08 100%); }
+  .clear .scene { background: transparent; }
+  .clear .glow, .clear .dust { display: none; }
+  .glow { position: absolute; width: 900px; height: 900px; right: 160px; top: 40px; border-radius: 50%; background: radial-gradient(circle, rgba(255,181,71,.35), transparent 65%); animation: breathe 6s ease-in-out infinite; }
+  .dust i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,220,170,.5); animation: float linear infinite; }
+  .left { position: absolute; left: 150px; top: 280px; width: 980px; }
+  .tag { font-size: 24px; font-weight: 600; letter-spacing: .28em; text-transform: uppercase; color: var(--c); }
+  h1 { margin: 18px 0 0; font: 800 160px/0.92 'Fraunces', Georgia, serif; letter-spacing: -.035em; }
+  .text { margin-top: 30px; font-size: 34px; color: #f2dcc4; max-width: 860px; }
+  .timer { margin-top: 38px; display: inline-flex; align-items: baseline; gap: 16px; padding: 16px 28px; border-radius: 99px; background: rgba(255,181,71,.12); border: 2px solid rgba(255,181,71,.4); font-size: 26px; color: #f2dcc4; }
+  .timer b { font: 600 46px 'Fraunces', Georgia, serif; color: var(--c); font-variant-numeric: tabular-nums; }
+  .mug { position: absolute; right: 330px; top: 300px; width: 300px; height: 300px; }
+  .cup { position: absolute; left: 30px; bottom: 0; width: 200px; height: 190px; border-radius: 0 0 60px 60px; background: linear-gradient(180deg, var(--c), #e0892a); box-shadow: inset -18px 0 0 rgba(0,0,0,.12), 0 30px 60px rgba(0,0,0,.45); }
+  .cup::after { content: ''; position: absolute; right: -62px; top: 34px; width: 70px; height: 90px; border: 20px solid #e8972f; border-left: 0; border-radius: 0 50px 50px 0; }
+  .cup::before { content: ''; position: absolute; left: 0; right: 0; top: -14px; height: 28px; border-radius: 50%; background: #5a3220; border: 8px solid #f0a646; box-sizing: border-box; }
+  .steam { position: absolute; bottom: 210px; width: 22px; height: 110px; border-radius: 50%; border-left: 8px solid rgba(255,244,230,.55); animation: steam 3s ease-in-out infinite; }
+  .s1 { left: 70px; } .s2 { left: 120px; animation-delay: -1s; } .s3 { left: 170px; animation-delay: -2s; }
+  .ticker { position: absolute; left: 0; right: 0; bottom: 70px; height: 72px; display: flex; align-items: center; gap: 18px; padding: 0 150px; overflow: hidden; }
+  .ticker .lbl { flex: none; font-size: 18px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: rgba(255,244,230,.5); }
+  .ticker .line { display: flex; gap: 14px; overflow: hidden; mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .m { flex: none; font-size: 24px; padding: 10px 18px; border-radius: 12px; background: rgba(255,244,230,.08); border: 1px solid rgba(255,244,230,.12); animation: pop .4s cubic-bezier(.2,1.4,.4,1); white-space: nowrap; max-width: 620px; overflow: hidden; text-overflow: ellipsis; }
+  .m b { color: var(--uc, var(--c)); margin-right: 8px; }
+  .m.hype { background: rgba(255,181,71,.2); border-color: var(--c); }
+  @keyframes breathe { 50% { transform: scale(1.08); opacity: .8; } }
+  @keyframes steam { 0% { transform: translateY(20px) scaleX(1); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(-50px) scaleX(-1); opacity: 0; } }
+  @keyframes float { from { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(-600px); opacity: 0; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(16px) scale(.95); } }
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="glow"></div><div class="dust" id="dust"></div>
+  <div class="left">
+    <div class="tag" id="tag"></div>
+    <h1 id="title"></h1>
+    <div class="text" id="text"></div>
+    <div class="timer"><span id="tlabel"></span><b id="time">00:00</b></div>
+  </div>
+  <div class="mug"><div class="steam s1"></div><div class="steam s2"></div><div class="steam s3"></div><div class="cup"></div></div>
+  <div class="ticker"><span class="lbl">Chat</span><div class="line" id="line"></div></div>
+</div>
+<script>
+  // ?minutes=10 counts down; without it the timer counts how long you've been away.
+  // &title=Be%20right%20back  &text=...  &color=%23ffb547  &bg=0 (transparent)
+  const esc = Overlaify.escape;
+  document.documentElement.style.setProperty('--c', Overlaify.param('color', '#ffb547'));
+  if (Overlaify.param('bg', true) === false) document.body.classList.add('clear');
+  document.getElementById('tag').textContent = Overlaify.param('tag', 'Quick break');
+  document.getElementById('title').textContent = Overlaify.param('title', 'Be right back');
+  document.getElementById('text').textContent = Overlaify.param('text', 'Stretching, refilling, back in a few. Keep chat warm for me.');
+
+  const dust = document.getElementById('dust');
+  for (let i = 0; i < 24; i++) {
+    const d = document.createElement('i');
+    d.style.cssText = `left:${Math.random() * 100}%;top:${60 + Math.random() * 50}%;animation-duration:${8 + Math.random() * 10}s;animation-delay:${-Math.random() * 18}s`;
+    dust.appendChild(d);
+  }
+
+  const MIN = Overlaify.param('minutes', 0);
+  // countdown: true counts down to end, false counts up from start.
+  let countdown, start, end;
+  function startTimer(min) {
+    countdown = min > 0; start = Date.now(); end = start + min * 60e3;
+    document.getElementById('tlabel').textContent = countdown ? 'Back in' : 'Away for';
+  }
+  startTimer(MIN);
+  Overlaify.action('backin', min => { if (Number(min) > 0) startTimer(Number(min)); });
+  Overlaify.action('restart', () => startTimer(MIN));
+  const time = document.getElementById('time');
+  const pad = n => String(n).padStart(2, '0');
+  (function tick() {
+    const s = Math.max(0, Math.round((countdown ? end - Date.now() : Date.now() - start) / 1000));
+    time.textContent = (s >= 3600 ? Math.floor(s / 3600) + ':' : '') + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60);
+    setTimeout(tick, 250);
+  })();
+
+  const line = document.getElementById('line');
+  function push(html, hype, color) {
+    const el = document.createElement('div');
+    el.className = 'm' + (hype ? ' hype' : '');
+    if (color) el.style.setProperty('--uc', color);
+    el.innerHTML = html;
+    line.prepend(el);
+    while (line.children.length > 6) line.lastElementChild.remove();
+  }
+  Overlaify.on('chat', e => { if (!e.message.startsWith('!')) push(`<b>${esc(e.name)}</b>${Overlaify.renderMessage(e.message, e.emotes)}`, false, e.color); });
+  Overlaify.on('sub', e => push(`<b>${esc(e.name)}</b>${e.months > 1 ? `resubbed · ${e.months} months` : 'subscribed'} ☕`, true));
+  Overlaify.on('gift', e => push(`<b>${esc(e.name)}</b>gifted a sub to ${esc(e.recipientName || e.recipient)}`, true));
+  Overlaify.on('giftbomb', e => push(`<b>${esc(e.name)}</b>gifted ${e.count} subs`, true));
+  Overlaify.on('cheer', e => push(`<b>${esc(e.name)}</b>cheered ${e.bits.toLocaleString()} bits`, true));
+  Overlaify.on('raid', e => { push(`<b>${esc(e.name)}</b>raided with ${e.viewers.toLocaleString()}`, true); Overlaify.chime('alert'); });
+</script>
+</body>
+</html>

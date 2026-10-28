@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Liquid Goal Bar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "type", "label": "What to count", "type": "segmented", "default": "subs", "options": [{"value": "subs", "label": "Subs"}, {"value": "bits", "label": "Bits"}], "group": "Goal"},
+    {"key": "goal", "label": "Goal", "type": "number", "default": 50, "desc": "Defaults to 50 subs or 10,000 bits.", "group": "Goal"},
+    {"key": "start", "label": "Starting value", "type": "number", "default": 0, "desc": "E.g. subs you already have this month.", "group": "Goal"},
+    {"key": "label", "label": "Title", "type": "text", "default": "Sub goal", "group": "Look"},
+    {"key": "color", "label": "Fill color", "type": "color", "default": "#ff4f8b", "swatches": ["#ff4f8b", "#ffb547", "#c6ff3d", "#5ce1ff", "#a879ff"], "group": "Look"}
+  ],
+  "actions": [
+    {"name": "add", "label": "Add", "input": {"type": "number", "label": "Amount", "default": 1, "step": 1, "min": 1}},
+    {"name": "set", "label": "Set progress", "style": "secondary", "input": {"type": "number", "label": "Value", "default": 0, "step": 1, "min": 0}},
+    {"name": "reset", "label": "Reset to 0", "style": "danger", "confirm": true, "wide": true}
+  ]
+}
+</script>
+<style>
+  :root { --c: #ff4f8b; --c2: #ffb547; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  .wrap { position: absolute; left: 50%; top: 36px; transform: translateX(-50%); width: 900px; font-family: 'Space Grotesk', system-ui, sans-serif; color: #fff; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; margin: 0 6px 10px; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  .label { font-size: 28px; font-weight: 700; letter-spacing: .02em; }
+  .count { font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .track { position: relative; height: 34px; border-radius: 99px; background: rgba(12,10,20,.75); border: 2px solid rgba(255,255,255,.18); overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+  .fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 99px;
+    background: linear-gradient(90deg, var(--c), var(--c2)); transition: width 1.2s cubic-bezier(.2,1,.3,1);
+    box-shadow: 0 0 20px var(--c); }
+  .fill::after { content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: repeating-linear-gradient(115deg, rgba(255,255,255,.22) 0 14px, transparent 14px 28px); animation: flow 1s linear infinite; }
+  .bump { animation: bump .5s; }
+  .done .fill { background: linear-gradient(90deg, #c6ff3d, #4dffa6); box-shadow: 0 0 28px #c6ff3d; }
+  @keyframes flow { to { background-position: 28px 0; } }
+  @keyframes bump { 40% { transform: scaleY(1.25); } }
+</style>
+</head>
+<body>
+<div class="wrap" id="w">
+  <div class="row"><span class="label" id="label"></span><span class="count" id="count"></span></div>
+  <div class="track" id="track"><div class="fill" id="fill"></div></div>
+</div>
+<script>
+  // ?type=subs|bits|follows  &goal=50  &start=0  &label=Sub%20goal  &color=%23ff4f8b
+  const TYPE = Overlaify.param('type', 'subs');
+  const GOAL = Overlaify.param('goal', TYPE === 'bits' ? 10000 : 50);
+  const KEY = `overlaify-goal-${Overlaify.channel}-${TYPE}-${GOAL}`;
+  const defaultLabel = { subs: 'Sub goal', bits: 'Bits goal', follows: 'Follower goal' }[TYPE] || 'Goal';
+  document.getElementById('label').textContent = Overlaify.param('label', defaultLabel);
+  document.documentElement.style.setProperty('--c', Overlaify.param('color', '#ff4f8b'));
+
+  let value = Overlaify.param('start', 0);
+  try { const saved = Number(localStorage.getItem(KEY)); if (saved > value) value = saved; } catch (e) {}
+
+  const fill = document.getElementById('fill'), count = document.getElementById('count'), track = document.getElementById('track');
+  function render(bump) {
+    const pct = Math.min(100, value / GOAL * 100);
+    fill.style.width = pct + '%';
+    count.textContent = `${value.toLocaleString()} / ${GOAL.toLocaleString()}`;
+    document.getElementById('w').classList.toggle('done', value >= GOAL);
+    if (bump) { track.classList.remove('bump'); void track.offsetWidth; track.classList.add('bump'); }
+    try { localStorage.setItem(KEY, String(value)); } catch (e) {}
+  }
+  function add(n) { if (n > 0) { const was = value < GOAL; value += n; render(true); if (was && value >= GOAL) Overlaify.chime('fanfare'); } }
+  Overlaify.action('add', n => add(Number(n) || 0));
+  Overlaify.action('set', n => { value = Math.max(0, Number(n) || 0); render(true); });
+  Overlaify.action('reset', () => { value = 0; render(true); });
+
+  if (TYPE === 'subs') {
+    Overlaify.on('sub', () => add(1));
+    Overlaify.on('gift', () => add(1));
+    // giftbomb is followed by individual 'gift' events from Twitch; count it only for simulations
+    Overlaify.on('giftbomb', e => e.simulated && add(e.count));
+  } else if (TYPE === 'bits') {
+    Overlaify.on('cheer', e => add(e.bits));
+  } else if (TYPE === 'follows') {
+    Overlaify.on('follow', () => add(1));
+  }
+  render(false);
+</script>
+</body>
+</html>

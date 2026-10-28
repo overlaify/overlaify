@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Glass Chat Stack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "max", "label": "Messages on screen", "type": "range", "default": 7, "min": 1, "max": 20, "step": 1, "desc": "Maximum number of messages on screen."},
+    {"key": "fade", "label": "Fade after", "type": "range", "default": 30, "min": 0, "max": 300, "step": 5, "unit": "s", "desc": "Seconds before a message fades out. 0 keeps messages until they are pushed off."},
+    {"key": "hidebots", "label": "Hide users", "type": "text", "default": "nightbot,streamelements,streamlabs", "desc": "Comma-separated usernames (lowercase, no spaces) whose messages are hidden."}
+  ],
+  "actions": [
+    {"name": "clear", "label": "Clear chat", "style": "danger", "wide": true}
+  ]
+}
+</script>
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  #chat { position: absolute; left: 40px; bottom: 60px; width: 520px; display: flex; flex-direction: column; gap: 12px; }
+  .msg {
+    font-family: 'Outfit', system-ui, sans-serif; font-size: 26px; line-height: 1.35; color: #f4f1ff;
+    background: rgba(16, 13, 26, .72); backdrop-filter: blur(8px);
+    border-left: 5px solid var(--uc, #9b5cff); border-radius: 6px 16px 16px 6px;
+    padding: 12px 18px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    text-shadow: 0 1px 2px rgba(0,0,0,.6);
+    transform-origin: left bottom; animation: slide .35s cubic-bezier(.2,1.2,.4,1);
+    transition: opacity .6s, transform .6s;
+  }
+  .msg.gone { opacity: 0; transform: translateX(-40px); }
+  .who { font-weight: 800; color: var(--uc, #9b5cff); margin-right: 8px; }
+  .badge { display: inline-block; font-size: 15px; font-weight: 600; padding: 1px 8px; border-radius: 99px; margin-right: 6px; vertical-align: 3px; color: #0b0a10; }
+  .b-mod { background: #4dffa6; } .b-sub { background: #ffb547; } .b-vip { background: #ff4f8b; } .b-broadcaster { background: #ff6b4a; }
+  .bits { font-weight: 800; color: #c6ff3d; margin-left: 6px; }
+  @keyframes slide { from { opacity: 0; transform: translateY(20px) scale(.96); } }
+</style>
+</head>
+<body>
+<div id="chat"></div>
+<script>
+  const MAX = Overlaify.param('max', 7);
+  const FADE = Overlaify.param('fade', 30);          // seconds, 0 = never
+  const HIDE_BOTS = Overlaify.param('hidebots', 'nightbot,streamelements,streamlabs').split(',');
+  const box = document.getElementById('chat');
+
+  function remove(el) { el.classList.add('gone'); setTimeout(() => el.remove(), 600); }
+
+  Overlaify.on('chat', e => {
+    if (HIDE_BOTS.includes(e.user) || e.message.startsWith('!')) return;
+    const el = document.createElement('div');
+    el.className = 'msg';
+    el.style.setProperty('--uc', e.color || '#9b5cff');
+    const badges = [e.isBroadcaster && 'broadcaster', e.isMod && 'mod', e.isVip && 'vip', e.isSub && 'sub'].filter(Boolean)
+      .map(b => `<span class="badge b-${b}">${b === 'broadcaster' ? 'LIVE' : b.toUpperCase()}</span>`).join('');
+    el.innerHTML = `${badges}<span class="who">${Overlaify.escape(e.name)}</span>${Overlaify.renderMessage(e.message, e.emotes)}${e.bits ? `<span class="bits">◆ ${e.bits}</span>` : ''}`;
+    box.appendChild(el);
+    while (box.children.length > MAX) box.firstElementChild.remove();
+    if (FADE > 0) setTimeout(() => el.isConnected && remove(el), FADE * 1000);
+  });
+
+  Overlaify.action('clear', () => { box.replaceChildren(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Breaking News Ticker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Roboto+Condensed:wght@500;700&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "speed", "label": "Scroll speed", "type": "range", "default": 110, "min": 30, "max": 300, "step": 10, "unit": "px/s"},
+    {"key": "keep", "label": "Stories on the rail", "type": "range", "default": 10, "min": 2, "max": 30, "step": 1, "desc": "Older stories drop off as new ones arrive."},
+    {"key": "flash", "label": "Breaking-news banner", "type": "toggle", "default": true, "desc": "Show a banner when news breaks."}
+  ],
+  "actions": [
+    {"name": "post", "label": "Post a story", "wide": true, "input": {"type": "text", "label": "Headline", "default": "Streamer spotted touching grass, more at 11"}},
+    {"name": "clear", "label": "Clear stories", "style": "danger", "confirm": "Clear the rail back to the opening stories?"}
+  ]
+}
+</script>
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  .ticker { position: absolute; left: 0; right: 0; bottom: 0; height: 58px; display: flex; font-family: 'Roboto Condensed', sans-serif;
+    box-shadow: 0 -6px 20px rgba(0,0,0,.35); }
+  .tag { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 0 26px 0 22px; background: #d6001c; color: #fff;
+    font: 700 30px 'Oswald', sans-serif; letter-spacing: .06em; }
+  .tag::after { content: ''; position: absolute; right: -22px; top: 0; border-left: 22px solid #d6001c; border-top: 58px solid transparent; }
+  .tag .dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; animation: live 1.2s ease-in-out infinite; }
+  .clock { position: relative; z-index: 2; display: flex; align-items: center; padding: 0 22px; background: #0c1a33; color: #fff; font: 700 24px 'Oswald', sans-serif;
+    font-variant-numeric: tabular-nums; border-left: 3px solid #d6001c; }
+  .rail { position: relative; flex: 1; overflow: hidden; background: linear-gradient(180deg, #f6f7fb, #dfe3ec); }
+  .rail::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: #0c1a33; z-index: 1; }
+  .track { position: absolute; top: 4px; bottom: 0; left: 0; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
+  .item { display: inline-flex; align-items: center; gap: 12px; padding: 0 30px; font-size: 27px; color: #0c1a33; }
+  .item b { font-weight: 700; }
+  .item .k { font: 700 18px 'Oswald', sans-serif; letter-spacing: .1em; color: #fff; background: #0c1a33; padding: 3px 9px 2px; border-radius: 3px; }
+  .item .k.sub { background: #6a2cd8; } .item .k.gift { background: #0f8a5f; } .item .k.bits { background: #c77700; } .item .k.raid { background: #d6001c; }
+  .item::after { content: '◆'; margin-left: 30px; color: #d6001c; font-size: 16px; }
+  .item.fresh { animation: fresh 2s ease-out; }
+  /* full-width flash when news breaks */
+  .flash { position: absolute; left: 0; right: 0; bottom: 58px; height: 72px; display: flex; align-items: center; padding-left: 26px; gap: 18px;
+    background: linear-gradient(90deg, #d6001c, #a30016); color: #fff; font: 700 38px 'Oswald', sans-serif; letter-spacing: .02em;
+    transform: translateY(100%); clip-path: inset(0 0 0 0); transition: transform .4s cubic-bezier(.2,1,.3,1); }
+  .flash.on { transform: none; }
+  .flash small { font: 700 22px 'Oswald', sans-serif; letter-spacing: .2em; background: #fff; color: #d6001c; padding: 4px 10px; }
+  @keyframes live { 50% { opacity: .25; } }
+  @keyframes fresh { 0% { background: #ffe14d; } 100% { background: transparent; } }
+</style>
+</head>
+<body>
+<div class="flash" id="flash"><small>BREAKING</small><span id="flashText"></span></div>
+<div class="ticker">
+  <div class="tag"><span class="dot"></span>BREAKING:</div>
+  <div class="rail"><div class="track" id="track"></div></div>
+  <div class="clock" id="clock"></div>
+</div>
+<script>
+  // ?speed=110 (pixels per second)  &keep=10 (stories on the rail)  &flash=1 (show a banner when news breaks)
+  const SPEED = Overlaify.param('speed', 110);
+  const KEEP = Overlaify.param('keep', 10);
+  const FLASH = Overlaify.param('flash', true);
+  const track = document.getElementById('track');
+  const esc = Overlaify.escape;
+  const name = s => `<b>${esc(s)}</b>`;
+
+  const OPENING = [
+    { k: 'news', html: `Stream is <b>LIVE</b> — sources confirm vibes are immaculate` },
+    { k: 'news', html: `Chat reminds streamer to hydrate, streamer reportedly "will in a sec"` },
+  ];
+  const stories = OPENING.slice();
+  function story(e) {
+    const tier = e.tier === 'prime' ? 'with Prime' : `at Tier ${e.tier}`;
+    switch (e.type) {
+      case 'follow':   return { k: 'news', label: 'FOLLOW', html: `${name(e.name)} joins the audience` };
+      case 'sub':      return { k: 'sub', label: e.months > 1 ? 'RESUB' : 'SUB', html: e.months > 1 ? `${name(e.name)} renews for month ${e.months} ${tier}` : `${name(e.name)} subscribes ${tier}` };
+      case 'gift':     return { k: 'gift', label: 'GIFT', html: `${name(e.name)} gifts a sub to ${name(e.recipientName || e.recipient)}` };
+      case 'giftbomb': return { k: 'gift', label: 'GIFT BOMB', html: `${name(e.name)} drops <b>${e.count}</b> gifted subs on the community` };
+      case 'cheer':    return { k: 'bits', label: 'BITS', html: `${name(e.name)} cheers <b>${e.bits.toLocaleString()}</b> bits` };
+      case 'raid':     return { k: 'raid', label: 'RAID', html: `${name(e.name)} raids with <b>${e.viewers.toLocaleString()}</b> viewers` };
+    }
+  }
+
+  // The rail is built from two copies of the stories so it loops without a gap.
+  let x = 0, width = 0, fresh = null;
+  function build() {
+    const one = stories.map((s, i) => `<span class="item${s === fresh ? ' fresh' : ''}">${s.label ? `<span class="k ${s.k}">${s.label}</span>` : ''}${s.html}</span>`).join('');
+    track.innerHTML = one + one;
+    width = track.scrollWidth / 2;
+    // Keep it at least as wide as the rail so one copy always covers it.
+    if (width < track.parentNode.offsetWidth) { track.innerHTML = one.repeat(Math.ceil(track.parentNode.offsetWidth / width) * 2); width = track.scrollWidth / 2; }
+  }
+  let last = performance.now();
+  function frame(t) {
+    x -= (t - last) / 1000 * SPEED; last = t;
+    if (width && -x >= width) x += width;
+    track.style.transform = `translateX(${x}px)`;
+    requestAnimationFrame(frame);
+  }
+
+  let flashTimer;
+  function flash(html) {
+    if (!FLASH) return;
+    const f = document.getElementById('flash');
+    document.getElementById('flashText').innerHTML = html;
+    f.classList.add('on');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => f.classList.remove('on'), 4500);
+  }
+
+  function publish(s, sound) {
+    stories.unshift(s);
+    stories.length = Math.min(stories.length, KEEP);
+    fresh = s;
+    build();
+    x = 0; // the newest story starts right after the tag
+    flash(s.html);
+    Overlaify.chime(sound, Overlaify.param('volume', 0.25) * .6);
+  }
+  ['follow', 'sub', 'gift', 'giftbomb', 'cheer', 'raid'].forEach(t => Overlaify.on(t, e => {
+    const s = story(e); if (!s) return;
+    publish(s, e.type === 'raid' ? 'fanfare' : 'pop');
+  }));
+  Overlaify.action('post', text => {
+    text = String(text || '').trim();
+    if (text) publish({ k: 'news', label: 'NEWS', html: esc(text) }, 'pop');
+  });
+  Overlaify.action('clear', () => { stories.splice(0, stories.length, ...OPENING); fresh = null; build(); x = 0; });
+
+  setInterval(() => { document.getElementById('clock').textContent = new Date().toTimeString().slice(0, 5); }, 1000);
+  document.getElementById('clock').textContent = new Date().toTimeString().slice(0, 5);
+  document.fonts.ready.then(() => { build(); requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

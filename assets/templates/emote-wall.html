@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Emote Wall</title>
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "mode", "label": "Motion", "type": "segmented", "default": "rise", "options": [{"value": "rise", "label": "Rise"}, {"value": "rain", "label": "Rain"}, {"value": "bounce", "label": "Bounce"}], "group": "Look"},
+    {"key": "size", "label": "Emote size", "type": "range", "default": 112, "min": 32, "max": 256, "step": 4, "unit": "px", "group": "Look"},
+    {"key": "life", "label": "Time on screen", "type": "range", "default": 6, "min": 2, "max": 20, "step": 1, "unit": "s", "group": "Look", "desc": "Seconds each emote stays. When not set, Bounce uses 8."},
+    {"key": "max", "label": "Max on screen", "type": "range", "default": 80, "min": 10, "max": 300, "step": 10, "group": "Limits", "desc": "Oldest emotes are removed past this."},
+    {"key": "per", "label": "Max per message", "type": "range", "default": 6, "min": 1, "max": 20, "step": 1, "group": "Limits"},
+    {"key": "combo", "label": "Combo after", "type": "range", "default": 5, "min": 0, "max": 20, "step": 1, "group": "Chat", "desc": "Messages in a row with the same emote before a combo banner. 0 turns it off."},
+    {"key": "emoji", "label": "Include emoji", "type": "toggle", "default": true, "group": "Chat", "desc": "Off shows only Twitch emotes."}
+  ],
+  "actions": [
+    {"name": "clear", "label": "Clear", "style": "danger", "wide": true}
+  ]
+}
+</script>
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  .e { position: absolute; left: 0; top: 0; width: var(--s); height: var(--s); display: grid; place-items: center; will-change: transform, opacity;
+    font: var(--s)/1 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+  .e img { width: 100%; height: 100%; object-fit: contain; }
+  .e span { font-size: .8em; }
+  .combo { position: absolute; left: 50%; top: 140px; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; padding: 14px 30px;
+    border-radius: 99px; background: rgba(12,10,20,.82); border: 3px solid #c6ff3d; box-shadow: 0 0 30px rgba(198,255,61,.5);
+    font: 800 46px system-ui, sans-serif; color: #fff; animation: combo .5s cubic-bezier(.2,1.6,.4,1); }
+  .combo img, .combo span { height: 72px; font-size: 64px; }
+  .combo b { color: #c6ff3d; }
+  @keyframes combo { from { transform: translateX(-50%) scale(.4); opacity: 0; } }
+</style>
+</head>
+<body>
+<script>
+  // ?mode=rise|rain|bounce  &size=112  &max=80 emotes on screen  &per=6 emotes per message  &emoji=0 ignore emoji
+  // &combo=5 shows a combo banner when that many messages in a row use the same emote (0 = off)
+  const MODE = Overlaify.param('mode', 'rise');
+  const SIZE = Overlaify.param('size', 112);
+  const MAX = Overlaify.param('max', 80), PER = Overlaify.param('per', 6);
+  const EMOJI = Overlaify.param('emoji', true), COMBO = Overlaify.param('combo', 5);
+  const LIFE = Overlaify.param('life', MODE === 'bounce' ? 8 : 6) * 1000;
+  document.documentElement.style.setProperty('--s', SIZE + 'px');
+  const W = 1920, H = 1080;
+  const url = id => `https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(id)}/default/dark/3.0`;
+  // Global Twitch emotes used when a simulated message has no emote data.
+  const SAMPLE = ['25', '425618', '86', '41', '30259', '81274', '64138'];
+  const EMOJI_RE = /\p{Extended_Pictographic}(️|‍\p{Extended_Pictographic})*/gu;
+
+  const live = [];
+  function spawn(key) {
+    if (live.length >= MAX) live.shift().el.remove();
+    const el = document.createElement('div');
+    el.className = 'e';
+    el.innerHTML = key.id ? `<img src="${url(key.id)}" alt="" onerror="this.parentNode.remove()">` : `<span>${Overlaify.escape(key.emoji)}</span>`;
+    document.body.appendChild(el);
+    const p = { el, born: performance.now(), rot: (Math.random() - .5) * 40, spin: (Math.random() - .5) * 120 };
+    if (MODE === 'rain') Object.assign(p, { x: Math.random() * (W - SIZE), y: -SIZE, vx: (Math.random() - .5) * 60, vy: 260 + Math.random() * 220 });
+    else if (MODE === 'bounce') Object.assign(p, { x: Math.random() * (W - SIZE), y: Math.random() * (H - SIZE), vx: (Math.random() < .5 ? -1 : 1) * (220 + Math.random() * 200), vy: (Math.random() < .5 ? -1 : 1) * (180 + Math.random() * 180), spin: 0 });
+    else Object.assign(p, { x: Math.random() * (W - SIZE), y: H, vx: 0, vy: -(220 + Math.random() * 180), wob: Math.random() * 6.28 });
+    live.push(p);
+  }
+
+  let last = performance.now();
+  (function frame(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    for (let i = live.length - 1; i >= 0; i--) {
+      const p = live[i], age = now - p.born;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.spin * dt;
+      if (MODE === 'bounce') {
+        if (p.x < 0 || p.x > W - SIZE) { p.vx *= -1; p.x = Math.max(0, Math.min(W - SIZE, p.x)); }
+        if (p.y < 0 || p.y > H - SIZE) { p.vy *= -1; p.y = Math.max(0, Math.min(H - SIZE, p.y)); }
+      }
+      const x = MODE === 'rise' ? p.x + Math.sin(age / 400 + p.wob) * 30 : p.x;
+      const fadeIn = Math.min(1, age / 200), fadeOut = Math.min(1, (LIFE - age) / 600);
+      p.el.style.transform = `translate(${x}px, ${p.y}px) rotate(${p.rot}deg) scale(${.6 + .4 * fadeIn})`;
+      p.el.style.opacity = Math.max(0, Math.min(fadeIn, fadeOut));
+      if (age > LIFE || p.y < -SIZE * 2 || p.y > H + SIZE) { p.el.remove(); live.splice(i, 1); }
+    }
+    requestAnimationFrame(frame);
+  })(last);
+
+  function keysOf(e) {
+    const found = [];
+    if (e.emotes) Object.keys(e.emotes).forEach(id => e.emotes[id].forEach(r => found.push({ id, at: r[0] })));
+    if (EMOJI) for (const m of e.message.matchAll(EMOJI_RE)) found.push({ emoji: m[0], at: m.index });
+    if (!found.length && e.simulated) for (let i = 0, n = 1 + Math.floor(Math.random() * 4); i < n; i++) found.push({ id: SAMPLE[Math.floor(Math.random() * SAMPLE.length)], at: i });
+    return found.sort((a, b) => a.at - b.at);
+  }
+
+  let streak = { k: '', n: 0 }, banner = null;
+  function combo(k) {
+    if (!COMBO) return;
+    const name = k.id || k.emoji;
+    streak = streak.k === name ? { k: name, n: streak.n + 1 } : { k: name, n: 1 };
+    if (streak.n < COMBO) return;
+    if (banner) banner.remove();
+    banner = document.createElement('div');
+    banner.className = 'combo';
+    banner.innerHTML = `${k.id ? `<img src="${url(k.id)}" alt="">` : `<span>${Overlaify.escape(k.emoji)}</span>`} COMBO <b>×${streak.n}</b>`;
+    document.body.appendChild(banner);
+    const mine = banner; setTimeout(() => mine.isConnected && mine.remove(), 3000);
+    if (streak.n === COMBO) Overlaify.chime('coin');
+    for (let i = 0; i < 6; i++) spawn(k);
+  }
+
+  Overlaify.action('clear', () => {
+    live.splice(0).forEach(p => p.el.remove());
+    if (banner) banner.remove();
+    streak = { k: '', n: 0 };
+  });
+
+  Overlaify.on('chat', e => {
+    const keys = keysOf(e);
+    if (!keys.length) { streak.n = 0; return; }
+    keys.slice(0, PER).forEach((k, i) => setTimeout(() => spawn(k), i * 90));
+    combo(keys[0]);
+  });
+</script>
+</body>
+</html>

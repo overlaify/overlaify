@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Starting Soon Countdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "minutes", "label": "Countdown", "type": "range", "default": 5, "min": 1, "max": 60, "step": 1, "unit": "min", "desc": "Starts when the browser source loads.", "group": "Timing"},
+    {"key": "until", "label": "Count down to", "type": "text", "default": "", "desc": "A local clock time like 19:30. Overrides the countdown length when set.", "group": "Timing"},
+    {"key": "done", "label": "When it hits zero", "type": "text", "default": "Going live any second…", "group": "Timing"},
+    {"key": "kicker", "label": "Small heading", "type": "text", "default": "", "desc": "Leave empty to show your channel name.", "group": "Text"},
+    {"key": "title", "label": "Headline", "type": "text", "default": "Starting soon", "group": "Text"},
+    {"key": "text", "label": "Line under the timer", "type": "text", "default": "Grab a drink and say hi in chat — we start in a moment.", "group": "Text"},
+    {"key": "color", "label": "Accent color", "type": "color", "default": "#c6ff3d", "swatches": ["#c6ff3d", "#5ce1ff", "#ff4f8b", "#ffb547", "#a879ff"], "group": "Look"},
+    {"key": "bg", "label": "Background", "type": "toggle", "default": true, "desc": "Turn off for a transparent background over your own art.", "group": "Look"},
+    {"key": "max", "label": "Chat messages shown", "type": "range", "default": 5, "min": 1, "max": 12, "step": 1, "group": "Look"}
+  ],
+  "actions": [
+    {"name": "add", "label": "Add time", "input": {"type": "number", "label": "Minutes", "default": 5, "step": 1, "min": 1}},
+    {"name": "pause", "label": "Pause", "style": "secondary"},
+    {"name": "resume", "label": "Resume"},
+    {"name": "restart", "label": "Restart countdown", "style": "danger", "confirm": true, "wide": true}
+  ]
+}
+</script>
+<style>
+  :root { --c: #c6ff3d; --c2: #9b5cff; --c3: #ff4f8b; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  .scene { position: absolute; inset: 0; overflow: hidden; font-family: 'Sora', system-ui, sans-serif; color: #fff;
+    background: radial-gradient(120% 90% at 20% 10%, #1d1438 0%, #0b0a14 55%, #07060c 100%); }
+  .clear .scene { background: transparent; }
+  .clear .orb { display: none; }
+  .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; animation: drift 18s ease-in-out infinite alternate; }
+  .o1 { width: 760px; height: 760px; left: -160px; top: -200px; background: var(--c2); }
+  .o2 { width: 620px; height: 620px; right: -120px; bottom: -180px; background: var(--c3); animation-delay: -6s; }
+  .o3 { width: 420px; height: 420px; left: 46%; top: 58%; background: var(--c); opacity: .22; animation-delay: -11s; }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px); background-size: 64px 64px; mask-image: radial-gradient(70% 70% at 50% 50%, #000, transparent); }
+  .center { position: absolute; left: 140px; top: 250px; width: 1100px; }
+  .kicker { display: inline-flex; align-items: center; gap: 14px; font-size: 24px; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; color: var(--c); }
+  .kicker i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: 0 0 18px var(--c); animation: blink 1.4s ease-in-out infinite; }
+  h1 { margin: 22px 0 0; font-size: 148px; font-weight: 800; line-height: .95; letter-spacing: -.045em; }
+  h1 span { display: inline-block; animation: rise .9s cubic-bezier(.2,1.2,.3,1) both; }
+  .time { margin-top: 38px; font: 700 120px 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+    background: linear-gradient(90deg, #fff, var(--c)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .time.live { font-size: 64px; animation: pulse 1s ease-in-out infinite; }
+  .text { margin-top: 18px; font-size: 32px; color: #d9d2f2; max-width: 980px; }
+  .chat { position: absolute; right: 90px; bottom: 90px; width: 520px; display: flex; flex-direction: column; gap: 12px; }
+  .chat h2 { margin: 0 0 4px; font-size: 18px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: rgba(255,255,255,.55); }
+  .msg { font-size: 24px; line-height: 1.35; padding: 12px 18px; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(10px); animation: in .4s cubic-bezier(.2,1.2,.4,1); }
+  .msg b { color: var(--uc, var(--c)); margin-right: 8px; }
+  .msg.hype { border-color: var(--c); background: rgba(198,255,61,.12); }
+  @keyframes drift { to { transform: translate(120px, 80px) scale(1.15); } }
+  @keyframes blink { 50% { opacity: .25; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(40px); } }
+  @keyframes pulse { 50% { opacity: .55; } }
+  @keyframes in { from { opacity: 0; transform: translateX(30px); } }
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="grid"></div>
+  <div class="center">
+    <div class="kicker"><i></i><span id="kicker"></span></div>
+    <h1 id="title"></h1>
+    <div class="time" id="time"></div>
+    <div class="text" id="text"></div>
+  </div>
+  <div class="chat" id="chat"><h2>Chat while you wait</h2></div>
+</div>
+<script>
+  // ?minutes=5  or  ?until=19:30 (local time)  &title=Starting%20soon  &text=...  &color=%23c6ff3d  &bg=0 (transparent)
+  const esc = Overlaify.escape;
+  document.documentElement.style.setProperty('--c', Overlaify.param('color', '#c6ff3d'));
+  if (Overlaify.param('bg', true) === false) document.body.classList.add('clear');
+  document.getElementById('kicker').textContent = Overlaify.param('kicker', Overlaify.channel ? Overlaify.channel : 'Stream');
+  document.getElementById('title').innerHTML = Overlaify.param('title', 'Starting soon').split(' ')
+    .map((w, i) => `<span style="animation-delay:${i * 90}ms">${esc(w)}</span>`).join(' ');
+  document.getElementById('text').textContent = Overlaify.param('text', 'Grab a drink and say hi in chat — we start in a moment.');
+
+  const until = Overlaify.param('until', '');
+  function startEnd() {
+    if (/^\d{1,2}:\d{2}$/.test(until)) {
+      const [h, m] = until.split(':').map(Number);
+      const d = new Date(); d.setHours(h, m, 0, 0);
+      if (d < Date.now() - 3600e3) d.setDate(d.getDate() + 1);
+      return d.getTime();
+    }
+    return Date.now() + Overlaify.param('minutes', 5) * 60e3;
+  }
+  // end = timestamp the countdown hits zero; while paused, pausedLeft = ms remaining.
+  let end = startEnd(), pausedLeft = null;
+  const msLeft = () => pausedLeft !== null ? pausedLeft : end - Date.now();
+  const time = document.getElementById('time');
+  const pad = n => String(n).padStart(2, '0');
+  let chimed = false;
+  (function tick() {
+    const left = Math.max(0, Math.round(msLeft() / 1000));
+    if (left > 0) {
+      const h = Math.floor(left / 3600), m = Math.floor(left / 60) % 60, s = left % 60;
+      time.textContent = (h ? h + ':' + pad(m) : pad(m)) + ':' + pad(s);
+      time.classList.remove('live'); chimed = false; // after time is added back
+    } else {
+      time.textContent = Overlaify.param('done', 'Going live any second…');
+      time.classList.add('live');
+      if (!chimed) { chimed = true; Overlaify.chime('fanfare'); }
+    }
+    setTimeout(tick, 250);
+  })();
+
+  Overlaify.action('add', min => {
+    const ms = (Number(min) || 0) * 60e3;
+    if (ms <= 0) return;
+    if (pausedLeft !== null) pausedLeft = Math.max(0, pausedLeft) + ms; else end = Math.max(end, Date.now()) + ms;
+  });
+  Overlaify.action('pause', () => { if (pausedLeft === null) pausedLeft = Math.max(0, end - Date.now()); });
+  Overlaify.action('resume', () => { if (pausedLeft !== null) { end = Date.now() + pausedLeft; pausedLeft = null; } });
+  Overlaify.action('restart', () => { end = startEnd(); pausedLeft = null; });
+
+  const MAX = Overlaify.param('max', 5);
+  const chat = document.getElementById('chat');
+  function push(html, hype, color) {
+    const el = document.createElement('div');
+    el.className = 'msg' + (hype ? ' hype' : '');
+    if (color) el.style.setProperty('--uc', color);
+    el.innerHTML = html;
+    chat.appendChild(el);
+    while (chat.querySelectorAll('.msg').length > MAX) chat.querySelector('.msg').remove();
+  }
+  Overlaify.on('chat', e => {
+    if (e.message.startsWith('!')) return;
+    push(`<b>${esc(e.name)}</b>${Overlaify.renderMessage(e.message, e.emotes)}`, false, e.color);
+  });
+  Overlaify.on('sub', e => push(`<b>${esc(e.name)}</b>${e.months > 1 ? `resubbed for ${e.months} months` : 'just subscribed'} 💜`, true));
+  Overlaify.on('gift', e => push(`<b>${esc(e.name)}</b>gifted a sub to ${esc(e.recipientName || e.recipient)}`, true));
+  Overlaify.on('giftbomb', e => push(`<b>${esc(e.name)}</b>gifted ${e.count} subs! 🎁`, true));
+  Overlaify.on('cheer', e => push(`<b>${esc(e.name)}</b>cheered ${e.bits.toLocaleString()} bits`, true));
+  Overlaify.on('raid', e => { push(`<b>${esc(e.name)}</b>is raiding with ${e.viewers.toLocaleString()} viewers!`, true); Overlaify.chime('alert'); });
+</script>
+</body>
+</html>

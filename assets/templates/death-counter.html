@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Death Counter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Rubik:wght@600&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "label", "label": "Title", "type": "text", "default": "Deaths", "group": "Look"},
+    {"key": "icon", "label": "Icon", "type": "text", "default": "💀", "desc": "Emoji or text shown next to the count.", "group": "Look"},
+    {"key": "color", "label": "Accent color", "type": "color", "default": "#ff3b5c", "swatches": ["#ff3b5c", "#ffb547", "#c6ff3d", "#5ce1ff", "#a879ff"], "group": "Look"},
+    {"key": "start", "label": "Starting count", "type": "number", "default": 0, "desc": "Used when nothing is saved yet.", "group": "Counter"},
+    {"key": "cmd", "label": "Chat command", "type": "text", "default": "death", "desc": "So !death, !death- and !death set 3.", "group": "Chat"},
+    {"key": "who", "label": "Who can change it from chat", "type": "segmented", "default": "mods", "options": [{"value": "mods", "label": "Mods"}, {"value": "vips", "label": "+ VIPs"}, {"value": "all", "label": "Everyone"}], "group": "Chat"}
+  ],
+  "actions": [
+    {"name": "add", "label": "+1"},
+    {"name": "remove", "label": "−1", "style": "secondary"},
+    {"name": "set", "label": "Set count", "style": "secondary", "input": {"type": "number", "label": "Count", "default": 0, "step": 1, "min": 0}},
+    {"name": "reset", "label": "Reset to 0", "style": "danger", "confirm": true, "wide": true}
+  ]
+}
+</script>
+<style>
+  :root { --c: #ff3b5c; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  .box { position: absolute; left: 50px; top: 50px; display: flex; align-items: center; gap: 20px; padding: 14px 30px 14px 18px; border-radius: 20px;
+    background: rgba(12,8,12,.86); border: 3px solid var(--c); box-shadow: 0 0 26px rgba(255,59,92,.35), 0 12px 30px rgba(0,0,0,.45); color: #fff; }
+  .icon { font-size: 64px; line-height: 1; filter: drop-shadow(0 0 10px var(--c)); }
+  .label { font: 600 22px 'Rubik', system-ui, sans-serif; letter-spacing: .24em; text-transform: uppercase; color: var(--c); }
+  .num { font: 400 72px/1 'Rubik Mono One', system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  .hit { animation: hit .6s cubic-bezier(.3,1.6,.5,1); }
+  .hit .icon { animation: shake .5s; }
+  .down .num { color: #c6ff3d; }
+  @keyframes hit { 30% { transform: scale(1.12); box-shadow: 0 0 60px var(--c); } }
+  @keyframes shake { 20% { transform: rotate(-18deg); } 40% { transform: rotate(14deg); } 60% { transform: rotate(-8deg); } }
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="icon" id="icon"></div>
+  <div><div class="label" id="label"></div><div class="num" id="num">0</div></div>
+</div>
+<script>
+  // Chat commands (broadcaster and mods; &who=vips adds VIPs, &who=all lets anyone):
+  //   !death  or !death+   add one        !death-   remove one
+  //   !death set 12        set the count  !death reset
+  // ?cmd=death renames the command  &label=Deaths  &icon=💀  &start=0  &color=%23ff3b5c
+  const CMD = Overlaify.param('cmd', 'death').toLowerCase().replace(/^!/, '');
+  const WHO = Overlaify.param('who', 'mods');
+  const KEY = `overlaify-counter-${Overlaify.channel || 'preview'}-${CMD}`;
+  document.documentElement.style.setProperty('--c', Overlaify.param('color', '#ff3b5c'));
+  document.getElementById('label').textContent = Overlaify.param('label', 'Deaths');
+  document.getElementById('icon').textContent = Overlaify.param('icon', '💀');
+
+  let n = Overlaify.param('start', 0);
+  if (!Overlaify.isTest) { try { const s = localStorage.getItem(KEY); if (s !== null) n = Number(s) || 0; } catch (e) {} }
+  const box = document.getElementById('box'), num = document.getElementById('num');
+  function set(v, anim) {
+    const up = v > n; n = Math.max(0, v);
+    num.textContent = n.toLocaleString();
+    if (!Overlaify.isTest) { try { localStorage.setItem(KEY, String(n)); } catch (e) {} }
+    if (anim) { box.classList.remove('hit', 'down'); void box.offsetWidth; box.classList.add(up ? 'hit' : 'down'); if (up) Overlaify.chime('low', 0.2); }
+  }
+  set(n, false);
+
+  const allowed = e => e.isBroadcaster || e.user === Overlaify.channel || e.isMod || (WHO === 'vips' && e.isVip) || WHO === 'all';
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const RE = new RegExp(`^!${esc(CMD)}(\\+|-|\\s+set\\s+(\\d+)|\\s+reset)?\\s*$`, 'i');
+  // Actions, from the control panel or from chat.
+  Overlaify.action('add', () => set(n + 1, true));
+  Overlaify.action('remove', () => set(n - 1, true));
+  Overlaify.action('set', v => set(Number(v) || 0, true));
+  Overlaify.action('reset', () => set(0, true));
+
+  Overlaify.on('chat', e => {
+    const m = e.message.trim().match(RE);
+    if (!m || !allowed(e)) return;
+    const op = (m[1] || '+').trim().toLowerCase();
+    if (op === '+') Overlaify.dispatch('add');
+    else if (op === '-') Overlaify.dispatch('remove');
+    else if (op === 'reset') Overlaify.dispatch('reset');
+    else Overlaify.dispatch('set', m[2]);
+  });
+
+  // Previews: tick the counter up now and then so it looks alive.
+  if (Overlaify.isTest) setInterval(() => set(n + 1, true), 4500);
+</script>
+</body>
+</html>

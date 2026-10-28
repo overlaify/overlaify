@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Subathon Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "label", "label": "Title", "type": "text", "default": "Subathon", "group": "Look"},
+    {"key": "color", "label": "Accent color", "type": "color", "default": "#5ce1ff", "swatches": ["#5ce1ff", "#ff4f8b", "#c6ff3d", "#ffb547", "#a879ff"], "group": "Look"},
+    {"key": "hours", "label": "Starting length (hours)", "type": "number", "default": 4, "group": "Timer"},
+    {"key": "sub", "label": "Seconds per sub", "type": "number", "default": 300, "desc": "Tier 2 subs count double, tier 3 five times.", "group": "Timer"},
+    {"key": "bits", "label": "Seconds per 100 bits", "type": "number", "default": 60, "group": "Timer"},
+    {"key": "max", "label": "Maximum length (hours)", "type": "number", "default": 0, "desc": "0 means no cap.", "group": "Timer"}
+  ],
+  "actions": [
+    {"name": "pause", "label": "Pause", "style": "secondary", "group": "Clock"},
+    {"name": "resume", "label": "Resume", "group": "Clock"},
+    {"name": "add", "label": "Add time", "input": {"type": "number", "label": "Minutes", "default": 10, "step": 5, "min": 1}, "group": "Adjust"},
+    {"name": "remove", "label": "Remove time", "style": "secondary", "input": {"type": "number", "label": "Minutes", "default": 5, "step": 5, "min": 1}, "group": "Adjust"},
+    {"name": "restart", "label": "Start over", "style": "danger", "confirm": "Reset the timer?", "wide": true, "group": "Adjust"}
+  ]
+}
+</script>
+<style>
+  :root { --c: #5ce1ff; --c2: #ff4f8b; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  .box { position: absolute; right: 60px; top: 90px; padding: 18px 34px 22px; border-radius: 20px; text-align: center;
+    font-family: 'Chakra Petch', system-ui, sans-serif; color: #fff;
+    background: linear-gradient(160deg, rgba(14,12,26,.9), rgba(24,16,40,.9)); border: 2px solid rgba(92,225,255,.45);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 12px 40px rgba(0,0,0,.45), 0 0 40px rgba(92,225,255,.18); }
+  .label { font-size: 22px; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; color: var(--c); }
+  .time { font-size: 92px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; letter-spacing: .02em; text-shadow: 0 0 24px rgba(92,225,255,.45); }
+  .paused .time { opacity: .5; }
+  .state { font-size: 18px; font-weight: 600; letter-spacing: .2em; color: var(--c2); height: 22px; }
+  .rules { display: flex; justify-content: center; gap: 18px; margin-top: 6px; font-size: 18px; color: rgba(255,255,255,.6); }
+  .bump { animation: bump .5s; }
+  .add { position: absolute; left: 50%; top: 40px; font-size: 44px; font-weight: 700; color: var(--c); text-shadow: 0 0 16px var(--c); white-space: nowrap; animation: up 1.8s ease-out forwards; pointer-events: none; }
+  .add small { display: block; font-size: 20px; color: #fff; text-shadow: none; opacity: .85; }
+  .over .time { color: var(--c2); }
+  @keyframes bump { 35% { transform: scale(1.06); } }
+  @keyframes up { from { opacity: 0; transform: translate(-50%, 30px); } 15% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -110px); } }
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="label" id="label"></div>
+  <div class="time" id="time">0:00:00</div>
+  <div class="state" id="state"></div>
+  <div class="rules" id="rules"></div>
+</div>
+<script>
+  // ?hours=4 starting time  &sub=300 seconds per sub (tier 2 = x2, tier 3 = x5)  &bits=60 seconds per 100 bits
+  // &max=24 hard cap in hours (0 = none)  &reset=1 start over (only when the value changes, so it is safe to leave in)  &label=Subathon  &color=%235ce1ff
+  // Mods and the broadcaster can type: !subathon add 10   !subathon remove 5   (minutes)   !subathon pause   !subathon resume
+  const esc = Overlaify.escape;
+  document.documentElement.style.setProperty('--c', Overlaify.param('color', '#5ce1ff'));
+  document.getElementById('label').textContent = Overlaify.param('label', 'Subathon');
+  const PER_SUB = Overlaify.param('sub', 300), PER_100_BITS = Overlaify.param('bits', 60);
+  const MAX = Overlaify.param('max', 0) * 3600e3;
+  const KEY = `overlaify-subathon-${Overlaify.channel || 'preview'}`;
+  const fmt = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+  document.getElementById('rules').innerHTML = [PER_SUB && `sub +${fmt(PER_SUB).replace(/^0:/, '')}`, PER_100_BITS && `100 bits +${fmt(PER_100_BITS).replace(/^0:/, '')}`].filter(Boolean).map(r => `<span>${esc(r)}</span>`).join('');
+
+  // state: end = timestamp the timer hits zero; while paused, left = ms remaining.
+  let st = null;
+  const RESET = Overlaify.param('reset', '');
+  if (!Overlaify.isTest) { try { st = JSON.parse(localStorage.getItem(KEY)); } catch (e) {} }
+  if (st && RESET && st.reset !== RESET) st = null;
+  if (!st) st = { end: Date.now() + Overlaify.param('hours', 4) * 3600e3, started: Date.now(), paused: false, left: 0, reset: RESET };
+  const save = () => { if (Overlaify.isTest) return; try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
+  save();
+  const left = () => st.paused ? st.left : st.end - Date.now();
+
+  const box = document.getElementById('box'), time = document.getElementById('time'), state = document.getElementById('state');
+  function render() {
+    const l = left();
+    time.textContent = fmt(l / 1000);
+    box.classList.toggle('paused', st.paused);
+    box.classList.toggle('over', l <= 0);
+    state.textContent = st.paused ? 'PAUSED' : l <= 0 ? 'SUBATHON OVER' : '';
+  }
+  (function tick() { render(); setTimeout(tick, 250); })();
+
+  function add(sec, why) {
+    if (!sec || left() <= 0 && !st.paused) return;
+    let ms = sec * 1000;
+    if (MAX && sec > 0) ms = Math.min(ms, st.started + MAX - (Date.now() + left()));
+    if (ms <= 0 && sec > 0) return;
+    if (st.paused) st.left = Math.max(0, st.left + ms); else st.end += ms;
+    save(); render();
+    box.classList.remove('bump'); void box.offsetWidth; box.classList.add('bump');
+    const a = document.createElement('div');
+    a.className = 'add';
+    a.innerHTML = `${ms > 0 ? '+' : '−'}${esc(fmt(Math.abs(ms) / 1000).replace(/^0:/, ''))}${why ? `<small>${esc(why)}</small>` : ''}`;
+    box.appendChild(a); setTimeout(() => a.remove(), 1900);
+    if (ms > 0) Overlaify.chime('coin', 0.15);
+  }
+  const mult = t => t === '3' ? 5 : t === '2' ? 2 : 1;
+  Overlaify.on('sub', e => add(PER_SUB * mult(e.tier), e.name));
+  Overlaify.on('gift', e => add(PER_SUB * mult(e.tier), e.name));
+  // A gift bomb is followed by one 'gift' event per sub; only simulations need the bulk add.
+  Overlaify.on('giftbomb', e => e.simulated && add(PER_SUB * e.count * mult(e.tier), e.name));
+  Overlaify.on('cheer', e => add(PER_100_BITS * e.bits / 100, e.name));
+
+  // Actions, from the control panel or from mods in chat.
+  Overlaify.action('add', (min, ev) => add(Number(min || 0) * 60, ev.by ? 'added by ' + ev.by : ''));
+  Overlaify.action('remove', min => add(-Number(min || 0) * 60, ''));
+  Overlaify.action('pause', () => { if (!st.paused) { st.left = Math.max(0, left()); st.paused = true; save(); render(); } });
+  Overlaify.action('resume', () => { if (st.paused) { st.end = Date.now() + st.left; st.paused = false; save(); render(); } });
+  Overlaify.action('restart', () => {
+    st = { end: Date.now() + Overlaify.param('hours', 4) * 3600e3, started: Date.now(), paused: false, left: 0, reset: RESET };
+    save(); render();
+  });
+
+  Overlaify.on('chat', e => {
+    if (!(e.isMod || e.isBroadcaster || e.user === Overlaify.channel)) return;
+    const m = e.message.trim().toLowerCase().match(/^!subathon\s+(add|remove|pause|resume)\s*(\d+)?/);
+    if (m) Overlaify.dispatch(m[1], m[2], { by: e.name });
+  });
+</script>
+</body>
+</html>

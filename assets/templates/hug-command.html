@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>!hug Blob Hugs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key": "command", "label": "Chat command", "type": "text", "default": "!hug", "desc": "\"!hug @name\" hugs that chatter; a bare \"!hug\" hugs the whole chat."},
+    {"key": "duration", "label": "Time on screen", "type": "range", "default": 5, "min": 2, "max": 20, "step": 1, "unit": "s"},
+    {"key": "cooldown", "label": "Cooldown", "type": "range", "default": 0, "min": 0, "max": 300, "step": 5, "unit": "s", "desc": "Seconds before the same chatter can hug again. 0 for none."}
+  ],
+  "actions": [
+    {"name": "hug", "label": "Send a hug", "wide": true, "input": {"type": "text", "label": "Hug who", "default": "chat"}}
+  ]
+}
+</script>
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  #stage { position: absolute; left: 50%; bottom: 60px; width: 700px; height: 430px; margin-left: -350px; font-family: 'Fredoka', system-ui, sans-serif; }
+  .scene { position: absolute; inset: 0; opacity: 0; transition: opacity .3s; }
+  .scene.in { opacity: 1; }
+  .names { position: absolute; left: 0; right: 0; top: 0; text-align: center; font-weight: 700; font-size: 44px; color: #fff;
+    text-shadow: 0 3px 0 rgba(0,0,0,.35), 0 0 14px rgba(0,0,0,.4); transform: translateY(-20px); opacity: 0; transition: all .45s cubic-bezier(.3,1.6,.5,1) .6s; }
+  .scene.in .names { transform: none; opacity: 1; }
+  .names b { color: var(--a); } .names b + span + b { color: var(--b); }
+  .names span { display: inline-block; margin: 0 12px; font-size: 40px; }
+  .sub { position: absolute; left: 0; right: 0; top: 58px; text-align: center; font-weight: 600; font-size: 26px; color: #ffe1f0;
+    text-shadow: 0 2px 6px rgba(0,0,0,.6); opacity: 0; transition: opacity .4s 1s; }
+  .scene.in .sub { opacity: 1; }
+  .blob { position: absolute; bottom: 0; width: 230px; height: 210px; }
+  .blob svg { width: 100%; height: 100%; overflow: visible; }
+  .blob.l { left: -260px; } .blob.r { right: -260px; }
+  .scene.in .blob.l { animation: inL 1.1s cubic-bezier(.3,1.3,.5,1) forwards, squishL .7s ease-in-out 1.1s 3; }
+  .scene.in .blob.r { animation: inR 1.1s cubic-bezier(.3,1.3,.5,1) forwards, squishR .7s ease-in-out 1.1s 3; }
+  /* Both arms live in the right blob's SVG (drawn last) so each one shows wrapping around the other blob. */
+  .blob .arm { opacity: 0; transition: opacity .25s .85s; }
+  .scene.in .blob .arm { opacity: 1; }
+  .blob .shut { opacity: 0; transition: opacity .2s 1.1s; } .blob .open { transition: opacity .2s 1.1s; }
+  .scene.in .blob .shut { opacity: 1; } .scene.in .blob .open { opacity: 0; }
+  .scene.out { opacity: 0; transition: opacity .5s; }
+  .heart { position: absolute; left: 50%; top: 240px; font-size: 40px; opacity: 0; animation: heart 1.8s ease-out forwards; }
+  @keyframes inL { to { left: 132px; } }
+  @keyframes inR { to { right: 132px; } }
+  @keyframes squishL { 50% { transform: translateX(14px) scale(1.06, .94); } }
+  @keyframes squishR { 50% { transform: translateX(-14px) scale(1.06, .94); } }
+  @keyframes heart { 0% { opacity: 0; transform: translate(-50%, 0) scale(.4); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), -150px) scale(1.2); } }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+  // ?command=!hug  &duration=5 (seconds on screen)  &cooldown=0 (seconds per chatter)
+  const CMD = Overlaify.param('command', '!hug').toLowerCase();
+  const DURATION = Overlaify.param('duration', 5) * 1000;
+  const COOLDOWN = Overlaify.param('cooldown', 0) * 1000;
+  const stage = document.getElementById('stage');
+  const esc = Overlaify.escape;
+  const PALETTE = ['#ff8fb8', '#8fd3ff', '#b7f28a', '#ffd06b', '#c9a6ff', '#ff9f7a', '#7ff0d2'];
+  function colorFrom(s) { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; }
+  // Very dark name colors make a gloomy blob, so lighten them a bit.
+  function blobColor(c, fallbackKey) {
+    const m = /^#([0-9a-f]{6})$/i.exec(c || '');
+    if (!m) return colorFrom(fallbackKey);
+    const n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    return (r * .3 + g * .59 + b * .11) < 90 ? colorFrom(fallbackKey) : c;
+  }
+
+  // Arms stroke with a darker edge so they read against a same-colored body.
+  function arm(d, color) {
+    return `<g class="arm"><path d="${d}" stroke="rgba(0,0,0,.2)" stroke-width="36" stroke-linecap="round" fill="none"/>
+      <path d="${d}" stroke="${color}" stroke-width="28" stroke-linecap="round" fill="none"/></g>`;
+  }
+  function blob(side, color, other) {
+    // The far eye sits toward the other blob so they look at each other.
+    const dir = side === 'l' ? 1 : -1, ex = 115 + dir * 22;
+    return `<div class="blob ${side}"><svg viewBox="0 0 230 210">
+      <path d="M20 200 C 0 120, 40 30, 115 30 C 190 30, 230 120, 210 200 Z" fill="${color}"/>
+      <path d="M20 200 C 0 120, 40 30, 115 30 C 190 30, 230 120, 210 200 Z" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="5"/>
+      <ellipse cx="80" cy="70" rx="22" ry="12" fill="#fff" opacity=".45" transform="rotate(-25 80 70)"/>
+      <g class="open"><circle cx="${ex - 30}" cy="110" r="10" fill="#2b2233"/><circle cx="${ex + 30}" cy="110" r="10" fill="#2b2233"/>
+        <circle cx="${ex - 27}" cy="106" r="3.5" fill="#fff"/><circle cx="${ex + 33}" cy="106" r="3.5" fill="#fff"/></g>
+      <g class="shut" stroke="#2b2233" stroke-width="5" fill="none" stroke-linecap="round"><path d="M${ex - 42} 110 q 12 -12 24 0"/><path d="M${ex + 18} 110 q 12 -12 24 0"/></g>
+      <ellipse cx="${ex - 50}" cy="132" rx="14" ry="8" fill="#ff6f9f" opacity=".55"/><ellipse cx="${ex + 50}" cy="132" rx="14" ry="8" fill="#ff6f9f" opacity=".55"/>
+      <path d="M${ex - 12} 134 q 12 12 24 0" stroke="#2b2233" stroke-width="5" fill="none" stroke-linecap="round"/>
+      ${side === 'r' ? arm('M-10 168 q 40 6 62 -14', other) + arm('M40 128 q -50 -6 -78 26', color) : ''}
+    </svg></div>`;
+  }
+
+  function hugSound() {
+    const v = Overlaify.param('volume', 0.25);
+    Overlaify.chime('pop', v * .6);
+    setTimeout(() => Overlaify.chime('coin', v * .25), 180);
+  }
+
+  let pending = 0;
+  const enqueue = Overlaify.queue(async ({ from, to }) => {
+    pending--;
+    const a = blobColor(from.color, from.user), b = colorFrom(to.toLowerCase());
+    const scene = document.createElement('div');
+    scene.className = 'scene';
+    scene.style.setProperty('--a', a); scene.style.setProperty('--b', b);
+    scene.innerHTML = `<div class="names"><b>${esc(from.name)}</b><span>🤗</span><b>${esc(to)}</b></div>
+      <div class="sub">sends a big hug!</div>${blob('l', a, b)}${blob('r', b, a)}`;
+    stage.appendChild(scene);
+    requestAnimationFrame(() => requestAnimationFrame(() => scene.classList.add('in')));
+    await Overlaify.sleep(1050);
+    hugSound();
+    ['💗', '💕', '💖', '💗', '💞'].forEach((h, i) => setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'heart'; el.textContent = h; el.style.setProperty('--dx', (Math.random() * 200 - 100) + 'px');
+      scene.appendChild(el); setTimeout(() => el.remove(), 1900);
+    }, i * 300));
+    await Overlaify.sleep(DURATION);
+    scene.classList.add('out');
+    await Overlaify.sleep(500);
+    scene.remove();
+  }, { gap: 300 });
+
+  Overlaify.action('hug', to => {
+    const name = Overlaify.channel || 'Streamer';
+    pending++;
+    enqueue({ from: { user: name.toLowerCase(), name, color: '' }, to: String(to || '').replace(/^@/, '').trim() || 'chat' });
+  });
+
+  const lastUse = {};
+  const NAMES = ['PixelPanda', 'nightowl_gg', 'CaptainCrit', 'mochi_bytes', 'SpeedySloth', 'RetroRaven', 'ZeroGravityZoe'];
+  Overlaify.on('chat', e => {
+    let to;
+    const msg = e.message.trim(), lower = msg.toLowerCase();
+    if (lower === CMD || lower.startsWith(CMD + ' ')) {
+      // "!hug @name" hugs that person; a bare "!hug" hugs the whole chat.
+      const m = /^@?([A-Za-z0-9_]{1,25})/.exec(msg.slice(CMD.length).trim());
+      to = m ? m[1] : 'chat';
+    } else if (e.simulated) {
+      // Previews never type !hug, so simulated chatters hug someone at random (one waiting at most).
+      if (pending > 0) return;
+      to = NAMES.filter(n => n !== e.name)[Math.floor(Math.random() * (NAMES.length - 1))];
+    } else return;
+    if (COOLDOWN && Date.now() - (lastUse[e.user] || 0) < COOLDOWN) return;
+    lastUse[e.user] = Date.now();
+    pending++;
+    enqueue({ from: e, to });
+  });
+</script>
+</body>
+</html>

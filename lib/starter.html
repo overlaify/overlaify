@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>My overlay</title>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<!-- Follows Overlay Spec v1; check it with: npx overlaify validate <file> -->
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    { "key": "color", "label": "Accent color", "type": "color", "default": "#c6ff3d", "swatches": ["#c6ff3d", "#ff4f8b", "#5ce1ff", "#ffb547", "#b48bff"] },
+    { "key": "duration", "label": "On screen", "type": "range", "min": 2, "max": 15, "step": 0.5, "unit": "s", "default": 5 }
+  ],
+  "actions": [
+    { "name": "test", "label": "Show a test alert" }
+  ]
+}
+</script>
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  #card { position: absolute; left: 50%; top: 120px; transform: translate(-50%, -30px); opacity: 0; transition: transform .45s, opacity .45s;
+    padding: 28px 48px; border-radius: 20px; background: rgba(11, 10, 16, .85); border: 3px solid var(--c); box-shadow: 0 0 40px var(--c);
+    color: #fff; font: 800 54px/1.1 system-ui, sans-serif; text-align: center; text-shadow: 0 3px 10px rgba(0, 0, 0, .6); }
+  #card.on { opacity: 1; transform: translate(-50%, 0); }
+  #card small { display: block; font-size: 24px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--c); }
+</style>
+</head>
+<body>
+<div id="card"><small id="kicker"></small><span id="name"></span></div>
+<script>
+  const card = document.getElementById('card');
+  document.documentElement.style.setProperty('--c', Overlaify.param('color', '#c6ff3d'));
+  const DURATION = Overlaify.param('duration', 5) * 1000;
+
+  const WORDS = { follow: 'New follower', sub: 'New subscriber', gift: 'Gifted a sub', giftbomb: 'Gift bomb', tip: 'Tipped', raid: 'Raid' };
+  const show = Overlaify.queue(async (e) => {
+    document.getElementById('kicker').textContent = WORDS[e.type] || e.type;
+    document.getElementById('name').textContent = e.type === 'tip' ? `${e.name} · ${e.display}` : e.name;
+    card.classList.add('on');
+    Overlaify.chime('alert');
+    await Overlaify.sleep(DURATION);
+    card.classList.remove('on');
+    await Overlaify.sleep(500);
+  });
+
+  Object.keys(WORDS).forEach((type) => Overlaify.on(type, show));
+  Overlaify.action('test', () => Overlaify.simulate('sub'));
+</script>
+</body>
+</html>

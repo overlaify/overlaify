@@ -1,0 +1,4 @@
+node_modules/
+.overlaify/
+*.tgz
+.DS_Store

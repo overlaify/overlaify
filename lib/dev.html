@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlaify dev</title>
+<style>
+  :root {
+    --bg: #0b0a10; --panel: #15131d; --line: #2a2735; --text: #f1eff7; --dim: #9a95ab;
+    --accent: #c6ff3d; --err: #ff5d73; --warn: #ffb547; --ok: #4dffa6;
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); }
+  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header b { font-size: 15px; }
+  header b span { color: var(--accent); }
+  #file { color: var(--dim); font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  .pill { padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; border: 1px solid var(--line); }
+  .pill.ok { color: var(--ok); border-color: #1f5c40; }
+  .pill.err { color: var(--err); border-color: #6a2431; }
+  .pill.warn { color: var(--warn); border-color: #6a4a1c; }
+  #obs { margin-left: auto; color: var(--dim); font-size: 13px; }
+  #obs.on { color: var(--ok); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; padding: 20px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
+    background: repeating-conic-gradient(#1b1924 0 25%, #14121b 0 50%) 0 0 / 32px 32px; }
+  .stage.dark { background: #26222f; }
+  /* A frame whose color scheme differs from the overlay's is painted opaque; light matches overlays, so it stays see-through. */
+  .stage iframe { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; background: transparent; color-scheme: light; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  button, .key { font: inherit; font-weight: 600; color: var(--text); background: #221f2c; border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  button:hover { border-color: #4a4560; }
+  button.primary { background: var(--accent); color: #0b0a10; border-color: var(--accent); }
+  button.secondary { background: transparent; }
+  button.danger { color: var(--err); }
+  button.armed { background: var(--err); color: #0b0a10; }
+  label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--dim); margin-left: 6px; }
+  aside { display: flex; flex-direction: column; gap: 16px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  section h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); }
+  section h3 { margin: 12px 0 6px; font-size: 12px; color: var(--dim); font-weight: 600; }
+  .issue { font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .issue:first-of-type { border-top: 0; }
+  .issue code { font-size: 11px; color: var(--dim); }
+  .issue.err code { color: var(--err); }
+  .issue.warn code { color: var(--warn); }
+  .empty { color: var(--dim); font-size: 13px; margin: 0; }
+  .keys { display: flex; flex-wrap: wrap; gap: 8px; }
+  .act { display: flex; gap: 6px; align-items: center; }
+  .act.wide { flex-basis: 100%; }
+  .act input, .act select { width: 90px; }
+  .field { display: grid; gap: 4px; margin-bottom: 10px; }
+  .field > span { font-size: 13px; }
+  .field small { color: var(--dim); font-size: 12px; }
+  input, select { font: inherit; color: var(--text); background: #0f0e15; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+  input[type=color] { width: 44px; height: 32px; padding: 2px; }
+  input[type=range] { flex: 1; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: transparent; }
+  .seg button.on { background: var(--accent); color: #0b0a10; }
+  .url { display: flex; gap: 6px; }
+  .url input { flex: 1; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  ol { margin: 8px 0 0; padding-left: 18px; color: var(--dim); font-size: 13px; }
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--accent); color: #0b0a10; font-weight: 600;
+    padding: 9px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <b>overlaify <span>dev</span></b>
+  <span id="file"></span>
+  <span id="spec" class="pill"></span>
+  <span id="obs">OBS: not connected</span>
+</header>
+<main>
+  <div>
+    <div class="stage" id="stage"><iframe id="frame" title="Overlay preview"></iframe></div>
+    <div class="bar" id="events"></div>
+    <div class="bar">
+      <label class="check"><input type="checkbox" id="auto"> Random test events</label>
+      <label class="check"><input type="checkbox" id="dark"> Dark background</label>
+    </div>
+  </div>
+  <aside>
+    <section><h2>Spec check</h2><div id="issues"></div></section>
+    <section><h2>Controls</h2><div id="actions"></div></section>
+    <section><h2>Settings</h2><div id="settings"></div></section>
+    <section>
+      <h2>Add to OBS</h2>
+      <div class="url"><input id="obsUrl" readonly><button id="copy">Copy</button></div>
+      <ol>
+        <li>OBS → Sources → + → Browser.</li>
+        <li>Paste the URL; width 1920, height 1080.</li>
+        <li>Controls and settings here reach it live; saving the file reloads it.</li>
+      </ol>
+    </section>
+  </aside>
+</main>
+<div id="toast"></div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var frame = $('frame'), state = null, saveTimer = null;
+  var EVENTS = [['follow', 'Follow'], ['sub', 'Sub'], ['gift', 'Gift sub'], ['giftbomb', 'Gift ×10', { count: 10 }], ['cheer', 'Bits'], ['raid', 'Raid'], ['chat', 'Chat']];
+  var SOUND = [
+    { key: 'volume', label: 'Volume', type: 'range', min: 0, max: 1, step: 0.05, default: 0.25, group: 'Sound' },
+    { key: 'mute', label: 'Mute sounds', type: 'toggle', default: false, group: 'Sound' }
+  ];
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('on'); }, 2200);
+  }
+  function api(path, body) {
+    return fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}).then(function (r) { return r.json(); });
+  }
+
+  /* ---------- preview ---------- */
+  function fit() { frame.style.transform = 'scale(' + ($('stage').clientWidth / 1920) + ')'; }
+  function loadFrame() { frame.src = '/overlay' + ($('auto').checked ? '?test=1' : ''); }
+  window.addEventListener('resize', fit);
+  $('auto').onchange = loadFrame;
+  $('dark').onchange = function () { $('stage').classList.toggle('dark', this.checked); };
+
+  EVENTS.forEach(function (e) {
+    var b = $('events').appendChild(el('button', null, e[1]));
+    b.onclick = function () { frame.contentWindow.postMessage({ __overlaify: 'simulate', type: e[0], data: e[2] }, '*'); };
+  });
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || e.source !== frame.contentWindow) return;
+    if (d.__overlaify === 'simulated' && !d.handled) toast('This overlay ignores ' + d.type + ' events');
+    if (d.__overlaify === 'acted' && !d.handled) toast('No handler for “' + d.name + '” in the preview');
+  });
+
+  /* ---------- spec check ---------- */
+  function renderIssues(check) {
+    var box = $('issues'); box.textContent = '';
+    var spec = $('spec');
+    spec.className = 'pill ' + (check.errors.length ? 'err' : check.warnings.length ? 'warn' : 'ok');
+    spec.textContent = check.errors.length ? check.errors.length + ' error' + (check.errors.length > 1 ? 's' : '')
+      : check.warnings.length ? 'Passes spec · ' + check.warnings.length + ' warning' + (check.warnings.length > 1 ? 's' : '') : 'Passes spec v1';
+    if (!check.errors.length && !check.warnings.length) return box.appendChild(el('p', 'empty', 'No problems. Ready for OBS and Overlaify.'));
+    check.errors.map(function (i) { return ['err', i]; }).concat(check.warnings.map(function (i) { return ['warn', i]; })).forEach(function (x) {
+      var row = box.appendChild(el('div', 'issue ' + x[0]));
+      row.appendChild(el('code', null, x[1].code + ' '));
+      row.appendChild(document.createTextNode(x[1].message));
+    });
+  }
+
+  /* ---------- action keys ---------- */
+  function optionsOf(list) {
+    return (list || []).map(function (o) {
+      return o && typeof o === 'object' ? { value: String(o.value), label: String(o.label == null ? o.value : o.label) } : { value: String(o), label: String(o) };
+    });
+  }
+  function grouped(list) {
+    var out = [], by = {};
+    list.forEach(function (x) {
+      var g = x.group ? String(x.group) : '';
+      if (!by[g]) out.push(by[g] = { name: g, items: [] });
+      by[g].items.push(x);
+    });
+    return out;
+  }
+  function sendAction(a, value) {
+    frame.contentWindow.postMessage({ __overlaify: 'action', name: a.name, value: value }, '*');
+    api('/api/action', { name: a.name, value: value }).then(function (d) {
+      toast((a.label || a.name) + ' → preview' + (d.to ? ' + ' + d.to + ' in OBS' : ''));
+    });
+  }
+  function renderActions(actions) {
+    var box = $('actions'); box.textContent = '';
+    actions = (actions || []).filter(function (a) { return a && a.name; });
+    if (!actions.length) return box.appendChild(el('p', 'empty', 'No actions in the manifest.'));
+    grouped(actions).forEach(function (g) {
+      if (g.name) box.appendChild(el('h3', null, g.name));
+      var keys = box.appendChild(el('div', 'keys'));
+      g.items.forEach(function (a) {
+        var row = keys.appendChild(el('div', 'act' + (a.input || a.wide ? ' wide' : '')));
+        var b = row.appendChild(el('button', a.style === 'secondary' || a.style === 'danger' ? a.style : 'primary', a.label || a.name));
+        var input = null, armed = null;
+        if (a.input) {
+          if (a.input.type === 'select') {
+            input = row.appendChild(el('select'));
+            optionsOf(a.input.options).forEach(function (o) { var op = input.appendChild(el('option', null, o.label)); op.value = o.value; });
+          } else {
+            input = row.appendChild(el('input'));
+            input.type = a.input.type === 'number' ? 'number' : 'text';
+            ['min', 'max', 'step'].forEach(function (k) { if (a.input[k] != null) input[k] = a.input[k]; });
+          }
+          if (a.input.default != null) input.value = a.input.default;
+          if (a.input.label) input.title = a.input.label;
+        }
+        b.onclick = function () {
+          if (a.confirm && !armed) {
+            b.classList.add('armed');
+            b.textContent = typeof a.confirm === 'string' ? a.confirm : 'Sure? Press again';
+            armed = setTimeout(disarm, 3000);
+            return;
+          }
+          disarm();
+          sendAction(a, input ? (a.input.type === 'number' ? Number(input.value) || 0 : input.value) : undefined);
+        };
+        function disarm() { clearTimeout(armed); armed = null; b.classList.remove('armed'); b.textContent = a.label || a.name; }
+      });
+    });
+  }
+
+  /* ---------- settings ---------- */
+  // Values are saved as strings, which the overlay reads with Overlaify.param(); a value equal to its default isn't saved.
+  var values = {};
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { api('/api/settings', { settings: values }); }, 300);
+  }
+  function setValue(s, v) {
+    v = v == null ? '' : String(v);
+    if (v === '' || v === String(s.default == null ? '' : s.default)) delete values[s.key]; else values[s.key] = v;
+    save();
+  }
+  function field(box, s) {
+    var f = box.appendChild(el('div', 'field'));
+    f.appendChild(el('span', null, s.label || s.key));
+    var cur = values[s.key] != null ? values[s.key] : (s.default == null ? '' : String(s.default));
+    var ctl = f.appendChild(el('div', 'row')), i;
+    switch (s.type) {
+      case 'toggle':
+        i = ctl.appendChild(el('input')); i.type = 'checkbox';
+        i.checked = cur === 'true' || cur === '1';
+        i.onchange = function () { setValue(s, i.checked ? 'true' : 'false'); };
+        break;
+      case 'color':
+        i = ctl.appendChild(el('input')); i.type = 'color'; i.value = /^#[0-9a-f]{6}$/i.test(cur) ? cur : '#000000';
+        i.oninput = function () { setValue(s, i.value); };
+        (s.swatches || []).forEach(function (c) {
+          var w = ctl.appendChild(el('button', 'swatch')); w.style.background = c; w.title = c;
+          w.onclick = function () { i.value = c; setValue(s, c); };
+        });
+        break;
+      case 'select':
+        i = ctl.appendChild(el('select'));
+        optionsOf(s.options).forEach(function (o) { var op = i.appendChild(el('option', null, o.label)); op.value = o.value; });
+        i.value = cur; i.onchange = function () { setValue(s, i.value); };
+        break;
+      case 'segmented':
+        var seg = ctl.appendChild(el('div', 'seg'));
+        optionsOf(s.options).forEach(function (o) {
+          var b = seg.appendChild(el('button', o.value === cur ? 'on' : null, o.label));
+          b.onclick = function () {
+            [].forEach.call(seg.children, function (c) { c.classList.remove('on'); });
+            b.classList.add('on'); setValue(s, o.value);
+          };
+        });
+        break;
+      case 'range':
+        i = ctl.appendChild(el('input')); i.type = 'range';
+        i.min = s.min; i.max = s.max; i.step = s.step || 'any'; i.value = cur;
+        var out = ctl.appendChild(el('small', null, cur + (s.unit ? ' ' + s.unit : '')));
+        i.oninput = function () { out.textContent = i.value + (s.unit ? ' ' + s.unit : ''); setValue(s, i.value); };
+        break;
+      default:
+        i = ctl.appendChild(el('input')); i.type = s.type === 'number' ? 'number' : 'text'; i.value = cur;
+        i.style.flex = '1';
+        i.oninput = function () { setValue(s, i.value); };
+    }
+    if (s.desc) f.appendChild(el('small', null, s.desc));
+  }
+  function renderSettings(manifest, saved) {
+    values = {};
+    Object.keys(saved || {}).forEach(function (k) { values[k] = saved[k]; });
+    var box = $('settings'); box.textContent = '';
+    field(box, { key: 'channel', label: 'Twitch channel', type: 'text', default: '', desc: 'Real chat, subs, bits and raids from this channel.' });
+    var list = (manifest && Array.isArray(manifest.settings) ? manifest.settings.filter(function (s) { return s && s.key; }) : []).concat(SOUND);
+    grouped(list).forEach(function (g) {
+      if (g.name) box.appendChild(el('h3', null, g.name));
+      g.items.forEach(function (s) { field(box, s); });
+    });
+  }
+
+  /* ---------- state ---------- */
+  function refresh() {
+    return api('/api/state').then(function (s) {
+      var first = !state;
+      state = s;
+      $('file').textContent = s.name + ' · ' + (s.bytes / 1024).toFixed(1) + ' KB';
+      document.title = s.name + ' — Overlaify dev';
+      renderIssues(s.check);
+      renderActions(s.manifest && s.manifest.actions);
+      // Rebuilding the form while someone types in it would steal focus; it only changes when the manifest does.
+      var sig = JSON.stringify(s.manifest && s.manifest.settings);
+      if (first || sig !== refresh.sig) renderSettings(s.manifest, s.settings);
+      refresh.sig = sig;
+      presence(s);
+      if (first) { loadFrame(); fit(); }
+    });
+  }
+  function presence(p) {
+    var o = $('obs');
+    o.classList.toggle('on', p.overlays > 0);
+    // OBS's browser identifies itself; other copies are browser tabs opened at the OBS URL.
+    o.textContent = p.obs ? 'OBS: ' + p.obs + ' connected' : p.overlays ? 'Running in ' + p.overlays + ' browser tab' + (p.overlays > 1 ? 's' : '') : 'OBS: not connected';
+  }
+
+  $('obsUrl').value = location.origin + '/overlay';
+  $('copy').onclick = function () { $('obsUrl').select(); navigator.clipboard.writeText($('obsUrl').value).then(function () { toast('Copied'); }); };
+
+  var es = new EventSource('/events');
+  // The preview reloads itself on 'reload'; the panels follow.
+  es.addEventListener('reload', function () { refresh(); });
+  es.addEventListener('presence', function (e) { presence(JSON.parse(e.data)); });
+  es.addEventListener('acted', function (e) { var d = JSON.parse(e.data); if (!d.handled) toast('OBS copy has no handler for “' + d.name + '”'); });
+  refresh();
+})();
+</script>
+</body>
+</html>

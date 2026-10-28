@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="https://www.overlaify.com/sdk/v1/overlaify.js"></script>
+<meta charset="utf-8">
+<title>Neon Pulse Alerts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&display=swap" rel="stylesheet">
+<script type="application/json" id="overlaify-manifest">
+{
+  "spec": 1,
+  "settings": [
+    {"key":"color","label":"Accent color","type":"color","default":"#c6ff3d","swatches":["#c6ff3d","#ff4f8b","#5ce1ff","#a879ff","#ffb547"],"desc":"Border, glow and kicker text."},
+    {"key":"duration","label":"Duration","type":"range","default":5,"min":2,"max":20,"step":0.5,"unit":"s","desc":"Seconds each alert stays on screen."}
+  ]
+}
+</script>
+<style>
+  :root { --c: #c6ff3d; --c2: #9b5cff; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  #stage { position: absolute; left: 50%; top: 120px; transform: translateX(-50%); }
+  .alert {
+    position: relative; min-width: 640px; padding: 34px 56px 38px; text-align: center;
+    font-family: 'Unbounded', system-ui, sans-serif; color: #fff;
+    background: rgba(10, 8, 18, .82); border-radius: 22px;
+    border: 3px solid var(--c);
+    box-shadow: 0 0 24px var(--c), inset 0 0 24px rgba(198,255,61,.25), 0 0 80px var(--c2);
+    opacity: 0; transform: scale(.6) translateY(-30px);
+  }
+  .alert.in { animation: pop .55s cubic-bezier(.2,1.6,.4,1) forwards; }
+  .alert.out { animation: leave .45s ease-in forwards; }
+  .kicker { font-size: 22px; font-weight: 500; letter-spacing: .32em; text-transform: uppercase; color: var(--c); text-shadow: 0 0 12px var(--c); }
+  .name { font-size: 64px; font-weight: 800; margin: 10px 0 6px; line-height: 1.05;
+    background: linear-gradient(90deg, #fff, var(--c), #fff); background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 1.6s linear infinite; }
+  .detail { font-size: 26px; font-weight: 500; color: #e9e4ff; }
+  .msg { margin-top: 14px; font: 500 22px system-ui, sans-serif; color: #cfc8e6; max-width: 760px; }
+  .ring { position: absolute; inset: -3px; border-radius: 22px; border: 3px solid var(--c); animation: ring 1.2s ease-out infinite; pointer-events: none; }
+  @keyframes pop { to { opacity: 1; transform: scale(1) translateY(0); } }
+  @keyframes leave { to { opacity: 0; transform: scale(.9) translateY(-40px); } }
+  @keyframes shine { to { background-position: -200% 0; } }
+  @keyframes ring { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(1.12); } }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+  const accent = Overlaify.param('color', '#c6ff3d');
+  document.documentElement.style.setProperty('--c', accent);
+  const DURATION = Overlaify.param('duration', 5) * 1000;
+  const stage = document.getElementById('stage');
+  const esc = Overlaify.escape;
+  const tierLabel = t => t === 'prime' ? 'with Prime' : `Tier ${t}`;
+
+  function content(e) {
+    switch (e.type) {
+      case 'follow':   return ['New follower', e.name, 'welcome to the squad', '', 'pop'];
+      case 'sub':      return [e.months > 1 ? 'Resub' : 'New sub', e.name, `${tierLabel(e.tier)}${e.months > 1 ? ` · ${e.months} months` : ''}`, e.message, 'fanfare'];
+      case 'gift':     return ['Gifted sub', e.name, `→ ${e.recipientName || e.recipient}`, '', 'alert'];
+      case 'giftbomb': return ['Gift bomb', e.name, `${e.count} subs to the community!`, '', 'fanfare'];
+      case 'cheer':    return ['Cheer', e.name, `${e.bits.toLocaleString()} bits`, e.message, 'coin'];
+      case 'raid':     return ['Raid incoming', e.name, `with ${e.viewers.toLocaleString()} raiders`, '', 'fanfare'];
+    }
+  }
+
+  const enqueue = Overlaify.queue(async (e) => {
+    const c = content(e); if (!c) return;
+    const [kicker, name, detail, msg, sound] = c;
+    const el = document.createElement('div');
+    el.className = 'alert';
+    el.innerHTML = `<div class="ring"></div><div class="kicker">${esc(kicker)}</div><div class="name">${esc(name)}</div><div class="detail">${esc(detail)}</div>${msg ? `<div class="msg">${esc(msg)}</div>` : ''}`;
+    stage.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('in'));
+    Overlaify.chime(sound);
+    await Overlaify.sleep(DURATION);
+    el.classList.add('out');
+    await Overlaify.sleep(450);
+    el.remove();
+  }, { gap: 400 });
+
+  ['follow', 'sub', 'gift', 'giftbomb', 'cheer', 'raid'].forEach(t => Overlaify.on(t, enqueue));
+</script>
+</body>
+</html>

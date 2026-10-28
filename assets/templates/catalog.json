@@ -1,0 +1,348 @@
+[
+  {
+    "slug": "neon-alert",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Neon Pulse Alerts",
+    "kind": "Alert box",
+    "tier": "free",
+    "desc": "Glowing pop-in alerts for follows, subs, gifts, bits and raids. Accent color via ?color=.",
+    "seoTitle": "Neon Pulse Alerts — Free Neon Twitch Alert Box for OBS",
+    "metaDesc": "Free neon Twitch alert box for OBS: glowing pop-in alerts for subs, resubs, gifted subs, bits and raids. Pick any accent color, paste one URL, go live.",
+    "about": [
+      "Neon Pulse is a free Twitch alert box that drops a glowing, sign-style card into the top of your scene whenever someone subscribes, gifts subs, cheers bits or raids your channel. The viewer's name shimmers across the card while a pulsing ring keeps it readable over busy gameplay.",
+      "Every alert type gets its own wording: resubs show the month streak and tier, gift bombs show the number of subs dropped, and cheers show the bits total plus the viewer's message. Alerts queue up so a raid followed by a wave of subs never overlaps."
+    ],
+    "features": [
+      "Sub, resub, gifted sub, gift bomb, bits and raid alerts",
+      "Shows resub messages and cheer messages",
+      "Accent color and on-screen duration set from the URL",
+      "Alerts queue instead of overlapping",
+      "Built-in sounds with volume and mute controls",
+      "Transparent 1920 × 1080 browser source"
+    ],
+    "listedAt": "2026-10-28T14:00:41.475Z",
+    "style": "Neon",
+    "accent": "#c6ff3d",
+    "crop": [
+      480,
+      0,
+      960
+    ],
+    "preview": "/assets/previews/neon-alert.png",
+    "clip": true
+  },
+  {
+    "slug": "chat-stack",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Glass Chat Stack",
+    "kind": "Chat",
+    "tier": "free",
+    "desc": "Frosted-glass chat with Twitch emotes, badges and auto-fade. Hides bots and !commands.",
+    "seoTitle": "Glass Chat Stack — Free Twitch Chat Overlay for OBS",
+    "metaDesc": "Free frosted-glass Twitch chat overlay for OBS with emotes, mod/sub/VIP badges and auto-fade. Hides bots and !commands. One browser source URL, no login.",
+    "about": [
+      "Glass Chat Stack puts your Twitch chat on stream as a column of frosted-glass bubbles in the bottom-left corner. Each message is tinted with the chatter's own Twitch name color, shows mod, sub, VIP and broadcaster badges, and renders Twitch emotes inline.",
+      "It is built to stay out of the way: old messages fade after 30 seconds, only the newest few are kept on screen, and messages from Nightbot, StreamElements, Streamlabs or anything starting with ! are hidden so command spam never reaches your viewers."
+    ],
+    "features": [
+      "Twitch emotes rendered inline",
+      "Mod, sub, VIP and broadcaster badges",
+      "Chatter name colors from Twitch",
+      "Auto-fade with adjustable timing",
+      "Hides bots and !commands",
+      "Highlights bits sent with a message"
+    ],
+    "listedAt": "2026-10-28T14:00:41.511Z",
+    "style": "Frosted glass",
+    "accent": "#9fd8ff",
+    "crop": [
+      0,
+      420,
+      1100
+    ],
+    "preview": "/assets/previews/chat-stack.png",
+    "clip": true
+  },
+  {
+    "slug": "goal-bar",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Liquid Goal Bar",
+    "kind": "Goal",
+    "tier": "free",
+    "desc": "Animated sub / bits goal bar that remembers progress. ?type=bits&goal=5000",
+    "seoTitle": "Liquid Goal Bar — Free Twitch Sub & Bits Goal Overlay for OBS",
+    "metaDesc": "Free animated Twitch goal bar for OBS. Track a sub goal or bits goal live, with a flowing liquid fill that remembers progress between streams. Fully set from the URL.",
+    "about": [
+      "Liquid Goal Bar is a free Twitch goal overlay that fills up live as your community subs or cheers. A striped, flowing gradient slides across the bar with every contribution, and the whole bar turns lime green with a fanfare when you hit the goal.",
+      "Progress is saved in the OBS browser source, so the bar picks up where it left off next stream. Choose a sub goal or a bits goal, set the target, starting value, label and color right in the URL, and add as many bars as you like for different goals."
+    ],
+    "features": [
+      "Sub goal or bits goal",
+      "Counts subs, gifted subs and gift bombs",
+      "Remembers progress between streams",
+      "Custom label, target, starting value and color",
+      "Celebration state and sound when the goal is reached",
+      "Transparent background, sits at the top of the scene"
+    ],
+    "listedAt": "2026-10-28T14:00:41.530Z",
+    "style": "Liquid fill",
+    "accent": "#ff4f8b",
+    "crop": [
+      400,
+      0,
+      1120
+    ],
+    "preview": "/assets/previews/goal-bar.png",
+    "clip": true
+  },
+  {
+    "slug": "starting-soon",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Starting Soon Countdown",
+    "kind": "Scene",
+    "tier": "free",
+    "desc": "Full-screen starting soon screen with a live countdown timer and chat while viewers wait. ?minutes=5",
+    "seoTitle": "Starting Soon Screen — Free Twitch Countdown Overlay for OBS",
+    "metaDesc": "Free animated starting soon screen for Twitch and OBS with a live countdown timer, your own headline and a chat feed so viewers can say hi before you go live.",
+    "about": [
+      "Starting Soon Countdown is a free, full-screen starting soon scene for Twitch. Drifting neon light, a big headline and a live countdown timer tell early viewers exactly when the stream starts, and when the timer hits zero it switches to a pulsing “going live any second” message.",
+      "Set the countdown in minutes or to a clock time like 19:30, and change the headline, the line underneath and the accent color right in the URL. A side panel shows the latest chat messages, new subs, cheers and raids, so the waiting room already feels alive before you switch scenes."
+    ],
+    "features": [
+      "Live countdown in minutes or to a clock time",
+      "Custom headline, message and accent color",
+      "Live chat feed while viewers wait",
+      "Highlights subs, gifted subs, bits and raids",
+      "Animated background, or transparent with bg=0",
+      "Full 1920 × 1080 scene, no image files needed"
+    ],
+    "listedAt": "2026-10-28T14:00:41.611Z",
+    "style": "Neon gradient",
+    "accent": "#b48bff",
+    "preview": "/assets/previews/starting-soon.png",
+    "clip": true
+  },
+  {
+    "slug": "be-right-back",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Cozy BRB Screen",
+    "kind": "Scene",
+    "tier": "free",
+    "desc": "Warm “be right back” scene with a steaming mug, away timer and scrolling chat ticker.",
+    "seoTitle": "Be Right Back Screen — Free Animated BRB Overlay for Twitch & OBS",
+    "metaDesc": "Free animated BRB screen for Twitch and OBS: a cozy be right back scene with an away timer or countdown, steaming mug animation and a live chat ticker.",
+    "about": [
+      "Cozy BRB Screen is a free be right back scene for Twitch streams. Warm lamplight, floating dust and a steaming mug keep the screen moving while you step away, and a big serif headline makes it obvious you will be back soon.",
+      "By default the timer counts how long you have been away; add a number of minutes and it becomes a “back in” countdown instead. A chat ticker along the bottom keeps the latest messages, subs, cheers and raids on screen, so your community can keep chatting during the break."
+    ],
+    "features": [
+      "Away timer or “back in” countdown",
+      "Live chat ticker along the bottom",
+      "Highlights subs, gifted subs, bits and raids",
+      "Custom headline, message and accent color",
+      "Animated background, or transparent with bg=0",
+      "Full 1920 × 1080 scene, no image files needed"
+    ],
+    "listedAt": "2026-10-28T14:00:41.628Z",
+    "style": "Coffee break",
+    "accent": "#ffb547",
+    "preview": "/assets/previews/be-right-back.png",
+    "clip": true
+  },
+  {
+    "slug": "webcam-frame",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Neon Webcam Frame",
+    "kind": "Webcam frame",
+    "tier": "free",
+    "desc": "Animated gradient facecam border with a name tag that flashes on subs, bits and raids.",
+    "seoTitle": "Neon Webcam Frame — Free Animated Facecam Border for OBS",
+    "metaDesc": "Free animated webcam frame for Twitch and OBS: a glowing gradient facecam border with a name tag that flashes on subs, bits and raids. Size and position from the URL.",
+    "about": [
+      "Neon Webcam Frame is a free webcam overlay that wraps your facecam in a slowly rotating neon gradient border with rounded corners and a live name tag. The inside is fully transparent, so you place it over your camera source and it just works.",
+      "Set the exact position and size in pixels so it lines up with your camera, pick two colors for the gradient, and change the corner radius and border thickness. When someone subscribes, gifts, cheers or raids, the border speeds up and glows while a small label pops up with their name."
+    ],
+    "features": [
+      "Rotating two-color gradient border",
+      "Name tag with a live dot",
+      "Flashes and shows a label on subs, bits and raids",
+      "Position, size, radius and border width from the URL",
+      "Transparent inside for your camera",
+      "Works with any webcam or capture card"
+    ],
+    "listedAt": "2026-10-28T14:00:41.645Z",
+    "style": "Neon",
+    "accent": "#c6ff3d",
+    "crop": [
+      1080,
+      560,
+      860
+    ],
+    "preview": "/assets/previews/webcam-frame.png",
+    "clip": true
+  },
+  {
+    "slug": "subathon-timer",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Subathon Timer",
+    "kind": "Timer",
+    "tier": "free",
+    "desc": "Countdown that grows with every sub and cheer. Remembers time between restarts. ?hours=4&sub=300",
+    "seoTitle": "Subathon Timer — Free Twitch Subathon Overlay for OBS",
+    "metaDesc": "Free Twitch subathon timer for OBS: subs, gifted subs and bits add time automatically, mods can add or pause from chat, and the timer survives OBS restarts.",
+    "about": [
+      "Subathon Timer is a free subathon overlay for Twitch. Set a starting length, and every new sub, resub, gifted sub and cheer adds time to the clock automatically, with a floating “+5:00” and the supporter’s name each time. Tier 2 subs count double and tier 3 subs count five times.",
+      "The end time is saved in the OBS browser source, so the timer keeps running correctly through crashes, scene switches and PC restarts. Mods and the broadcaster can add or remove minutes and pause or resume the timer from chat, and an optional cap keeps a subathon from running forever."
+    ],
+    "features": [
+      "Subs, gifted subs and bits add time automatically",
+      "Tier 2 and tier 3 subs add more time",
+      "Mod chat commands: add, remove, pause, resume",
+      "Survives OBS restarts and crashes",
+      "Optional maximum length cap",
+      "Floating “+time” with the supporter’s name"
+    ],
+    "listedAt": "2026-10-28T14:00:41.663Z",
+    "style": "Clean HUD",
+    "accent": "#5ce1ff",
+    "crop": [
+      1200,
+      0,
+      720
+    ],
+    "preview": "/assets/previews/subathon-timer.png",
+    "clip": true
+  },
+  {
+    "slug": "emote-wall",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Emote Wall",
+    "kind": "Chat effect",
+    "tier": "free",
+    "desc": "Every emote your chat sends floats, rains or bounces across the screen, with combo banners.",
+    "seoTitle": "Emote Wall — Free Twitch Emote Rain & Bounce Overlay for OBS",
+    "metaDesc": "Free Twitch emote wall for OBS: emotes and emoji from chat float up, rain down or bounce across your stream, with a combo banner when chat spams the same emote.",
+    "about": [
+      "Emote Wall is a free Twitch emote overlay that turns your chat into a light show. Every Twitch emote and emoji in a chat message pops onto the screen and floats up, rains down or bounces around DVD-logo style, so hype moments look as loud as they feel.",
+      "When chat sends the same emote several messages in a row, a combo banner appears with a running count and a burst of extra emotes. Choose the motion, emote size, how many can be on screen and how many each message can spawn, so it stays fun without covering your gameplay."
+    ],
+    "features": [
+      "Twitch emotes and emoji from chat",
+      "Three motions: rise, rain and bounce",
+      "Combo banner when chat spams one emote",
+      "Limits per message and on screen",
+      "Adjustable emote size and lifetime",
+      "Transparent full-screen browser source"
+    ],
+    "listedAt": "2026-10-28T14:00:41.680Z",
+    "style": "Emote chaos",
+    "accent": "#ff6b4a",
+    "preview": "/assets/previews/emote-wall.png",
+    "clip": true
+  },
+  {
+    "slug": "death-counter",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Death Counter",
+    "kind": "Counter",
+    "tier": "free",
+    "desc": "On-screen death counter your mods control from chat: !death, !death-, !death set 12.",
+    "seoTitle": "Death Counter — Free Twitch Death Counter Overlay for OBS",
+    "metaDesc": "Free Twitch death counter for OBS. Mods type !death to add one, !death- to undo or !death set 12. Saves the count between streams. Rename it to count anything.",
+    "about": [
+      "Death Counter is a free Twitch death counter overlay for souls-likes, roguelikes, horror games and any run where dying is part of the show. Each time a mod or the broadcaster types !death in chat, the count goes up with a shake and a low thud, right in the corner of your stream.",
+      "The count is saved in the OBS browser source, so it carries over between streams until you reset it. Rename the command and the label to track anything else — wipes, rage quits, jump scares or wins — and add several counters with different commands side by side."
+    ],
+    "features": [
+      "Chat commands: !death, !death-, !death set, !death reset",
+      "Only mods and the broadcaster by default",
+      "Saves the count between streams",
+      "Rename the command, label and icon to count anything",
+      "Shake animation and sound on every death",
+      "Run several counters at once"
+    ],
+    "listedAt": "2026-10-28T14:00:41.699Z",
+    "style": "Gamer HUD",
+    "accent": "#ff4f8b",
+    "crop": [
+      0,
+      0,
+      640
+    ],
+    "preview": "/assets/previews/death-counter.png",
+    "clip": true
+  },
+  {
+    "slug": "newsroom-ticker",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "Breaking News Ticker",
+    "kind": "Ticker",
+    "tier": "free",
+    "desc": "A slim BREAKING news rail along the bottom scrolls your latest subs, gifts, bits and raids.",
+    "seoTitle": "Breaking News Ticker — Free Twitch Event Ticker Overlay for OBS",
+    "metaDesc": "Free Twitch event ticker for OBS: a BREAKING news rail scrolls your latest subs, resubs, gifted subs, bits and raids along the bottom, with a flash banner for new events.",
+    "about": [
+      "Breaking News Ticker is a free Twitch event ticker that runs along the bottom of your stream like a 24-hour news channel. A red “BREAKING:” tag leads a scrolling rail of your latest subs, resubs, gifted subs, bits and raids, written as headlines.",
+      "Fresh events flash a red banner above the rail and jump to the front of the list. It keeps the last ten stories by default, so new viewers can see who supported the stream — a nice thank-you for your chat."
+    ],
+    "features": [
+      "Scrolling rail of recent subs, gifts, bits and raids",
+      "Newsroom-style headlines for each event",
+      "Flash banner when news breaks",
+      "Seamless loop with no gaps",
+      "Adjustable speed and story count"
+    ],
+    "listedAt": "2026-10-28T14:00:41.902Z",
+    "style": "Breaking news",
+    "accent": "#ff5c66",
+    "crop": [
+      0,
+      596,
+      860
+    ],
+    "preview": "/assets/previews/newsroom-ticker.png",
+    "clip": true
+  },
+  {
+    "slug": "hug-command",
+    "official": true,
+    "author": "Dev User (google)",
+    "title": "!hug Blob Hugs",
+    "kind": "Chat command",
+    "tier": "free",
+    "desc": "When a chatter types !hug @name, two cute blobs in their colors slide in and hug with both names above them.",
+    "seoTitle": "!hug Command — Free Twitch Hug Overlay for OBS",
+    "metaDesc": "Free Twitch !hug command overlay: when a viewer types !hug @name, two cute blobs in their name colors hug on stream with hearts floating up. No bot or login needed.",
+    "about": [
+      "!hug Blob Hugs is a free Twitch hug command overlay. When a viewer types !hug @name in chat, two round blobs in each person's Twitch name color slide in, squeeze each other and float hearts up, with both names shown above them.",
+      "A bare !hug hugs the whole chat. Add a per-chatter cooldown if your community gets too affectionate, or rename the command — !pat, !boop, !highfive — to make it your own."
+    ],
+    "features": [
+      "!hug @name shows two blobs hugging",
+      "Blobs in each viewer's name color",
+      "Plain !hug hugs the whole chat",
+      "Optional per-chatter cooldown",
+      "Rename the command"
+    ],
+    "listedAt": "2026-10-28T14:00:41.954Z",
+    "style": "Cute",
+    "accent": "#ff7eb6",
+    "crop": [
+      440,
+      480,
+      1040
+    ],
+    "preview": "/assets/previews/hug-command.png",
+    "clip": true
+  }
+]
