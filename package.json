@@ -11,5 +11,6 @@
   },
   "keywords": ["twitch", "obs", "overlay", "stream", "alerts", "browser-source", "claude", "skill"],
   "homepage": "https://www.overlaify.com",
+  "repository": { "type": "git", "url": "git+https://github.com/overlaify/overlaify.git" },
   "license": "MIT"
 }
