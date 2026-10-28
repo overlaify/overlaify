@@ -46,8 +46,9 @@ npx overlaify publish my-alert.html --new       # a separate overlay instead
 npx overlaify publish my-alert.html --name neon # its address: overlaify.com/<your username>/neon
 ```
 
-The overlay must pass the spec. It gets its own page at `overlaify.com/<your username>/<name>` (named after
-its `<title>` unless you pass `--name`), shows up in My overlays with its OBS URL, and the
+The overlay must pass the spec. It gets its own page at `overlaify.com/<your username>/<name>`. The first publish
+names it after the file (`my-alert.html` → `my-alert`) and lets you change that at the prompt; `--name` sets it
+up front, shows up in My overlays with its OBS URL, and the
 settings you chose in `overlaify dev` come with it. Which overlay a file was published as is kept in
 `.overlaify/<name>.publish.json`.
 

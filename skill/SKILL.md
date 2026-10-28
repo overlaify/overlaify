@@ -30,7 +30,7 @@ The full rules are in `references/overlay-spec.md`. Read it before writing your 
      when the file is saved, and the action keys reach it live.
    Tell the user to set their Twitch channel in the dev page's settings so real chat and events arrive.
 5. **Publish (only when the user asks).** `npx overlaify publish <file>.html --private` or `--public` puts it
-   on overlaify.com at `/<their username>/<name>` with a hosted OBS URL (`--name` sets the name). Ask the user which one they want; never pick for
+   on overlaify.com at `/<their username>/<name>` with a hosted OBS URL (named after the file, e.g. `my-alert.html` → `my-alert`; `--name` sets another). Ask the user which one they want; never pick for
    them. Private: only they can open it on the site, but the OBS URL still works. Public: anyone with a link
    can open and remix it, and it can be picked for the Overlaify Library. If it says they're not logged in,
    ask them to run `npx overlaify login` (it opens a browser to approve). Publishing the same file again
