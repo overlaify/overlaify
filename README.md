@@ -29,7 +29,9 @@ The dev page at `http://localhost:4545/` has:
 
 Add `http://localhost:4545/overlay` to OBS as a Browser source (1920×1080). It gets real Twitch chat and
 events from your channel, the action keys reach it live, and it reloads whenever you save the file.
-Properties are saved in `.overlaify/<name>.json` next to the file.
+Properties are saved in `.overlaify/<name>.json` next to the file. An overlay's live state (`Overlaify.store`)
+is kept by the OBS source itself, so it survives OBS refreshes and saving the file; the dev page's preview
+always starts fresh.
 
 Options: `--port`, `--channel <twitch name>`, and `--host 0.0.0.0` to reach it from a second streaming PC.
 
@@ -81,7 +83,7 @@ overlay, so `overlaify publish` adds your changes to it as a new version.
 - It loads only `https://www.overlaify.com/sdk/v1/overlaify.js`.
 - Events come from the SDK: `Overlaify.on('sub', fn)`, `Overlaify.queue(fn)` for alerts.
 - A JSON manifest declares the overlay's properties (read them with `Overlaify.param`) and its live actions
-  (handle them with `Overlaify.action`):
+  (handle them in the store, or with `Overlaify.action`):
 
 ```html
 <script type="application/json" id="overlaify-manifest">
@@ -89,6 +91,18 @@ overlay, so `overlaify publish` adds your changes to it as a new version.
   "properties": [{ "key": "color", "label": "Color", "type": "color", "default": "#c6ff3d" }],
   "actions":  [{ "name": "reset", "label": "Reset", "style": "danger", "confirm": true }] }
 </script>
+```
+
+- Live state (scores, counters, timers) goes in one store, so it survives an OBS refresh:
+
+```js
+const store = Overlaify.store({
+  version: 1,
+  state: () => ({ count: 0 }),
+  actions: { add: (s, n) => { s.count += Number(n) || 1; }, reset: s => { s.count = 0; } },
+  events: { sub: s => { s.count += 5; } }
+});
+store.render((s) => { document.getElementById('count').textContent = s.count; });
 ```
 
 `npx overlaify spec` prints the full spec.
