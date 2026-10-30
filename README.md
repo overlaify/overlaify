@@ -43,7 +43,7 @@ npx overlaify publish my-alert.html             # first time: choose private (on
 npx overlaify publish my-alert.html --public    # or say it up front
 npx overlaify publish my-alert.html             # again: a new version of the same overlay
 npx overlaify publish my-alert.html --new       # a separate overlay instead
-npx overlaify publish my-alert.html --name neon # its address: overlaify.com/<your username>/neon
+npx overlaify publish my-alert.html --name neon # its name, and address: overlaify.com/<your username>/neon
 ```
 
 The overlay must pass the spec. It gets its own page at `overlaify.com/<your username>/<name>`. The first publish
@@ -51,6 +51,10 @@ names it after the file (`my-alert.html` → `my-alert`) and lets you change tha
 up front, shows up in My overlays with its OBS URL, and the
 properties you chose in `overlaify dev` come with it. Which overlay a file was published as is kept in
 `.overlaify/<name>.publish.json`.
+
+Names work like GitHub repository names: unique among your overlays (ignoring case), while other users can have
+the same one. They can use letters, digits, `-`, `_` and `.`. Rename an overlay in its Settings on overlaify.com,
+and links to the old name redirect to the new one until you give the old name to another overlay.
 
 - **Private**: only you can open it on overlaify.com. Its OBS URL still works.
 - **Public**: anyone with a link can open it and remix it. Public overlays can be picked for the
