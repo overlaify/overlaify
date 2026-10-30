@@ -89,14 +89,14 @@
   <aside>
     <section><h2>Spec check</h2><div id="issues"></div></section>
     <section><h2>Controls</h2><div id="actions"></div></section>
-    <section><h2>Settings</h2><div id="settings"></div></section>
+    <section><h2>Properties</h2><div id="settings"></div></section>
     <section>
       <h2>Add to OBS</h2>
       <div class="url"><input id="obsUrl" readonly><button id="copy">Copy</button></div>
       <ol>
         <li>OBS → Sources → + → Browser.</li>
         <li>Paste the URL; width 1920, height 1080.</li>
-        <li>Controls and settings here reach it live; saving the file reloads it.</li>
+        <li>Controls and properties here reach it live; saving the file reloads it.</li>
       </ol>
     </section>
   </aside>
@@ -218,7 +218,12 @@
     });
   }
 
-  /* ---------- settings ---------- */
+  /* ---------- properties ---------- */
+  // The manifest's properties; overlays from before the rename list them under "settings".
+  function propertiesOf(m) {
+    var list = m && ('properties' in m ? m.properties : m.settings);
+    return Array.isArray(list) ? list : [];
+  }
   // Values are saved as strings, which the overlay reads with Overlaify.param(); a value equal to its default isn't saved.
   var values = {};
   function save() {
@@ -282,7 +287,7 @@
     Object.keys(saved || {}).forEach(function (k) { values[k] = saved[k]; });
     var box = $('settings'); box.textContent = '';
     field(box, { key: 'channel', label: 'Twitch channel', type: 'text', default: '', desc: 'Real chat, subs, bits and raids from this channel.' });
-    var list = (manifest && Array.isArray(manifest.settings) ? manifest.settings.filter(function (s) { return s && s.key; }) : []).concat(SOUND);
+    var list = propertiesOf(manifest).filter(function (s) { return s && s.key; }).concat(SOUND);
     grouped(list).forEach(function (g) {
       if (g.name) box.appendChild(el('h3', null, g.name));
       g.items.forEach(function (s) { field(box, s); });
@@ -299,7 +304,7 @@
       renderIssues(s.check);
       renderActions(s.manifest && s.manifest.actions);
       // Rebuilding the form while someone types in it would steal focus; it only changes when the manifest does.
-      var sig = JSON.stringify(s.manifest && s.manifest.settings);
+      var sig = JSON.stringify(propertiesOf(s.manifest));
       if (first || sig !== refresh.sig) renderSettings(s.manifest, s.settings);
       refresh.sig = sig;
       presence(s);

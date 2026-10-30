@@ -2,13 +2,13 @@
 
 An Overlaify overlay is one HTML document that runs as an OBS Browser Source. Anything that follows this spec
 — written in Overlaify Studio, by another AI, or by hand — can be hosted on Overlaify, previewed with simulated
-events, configured from a settings panel and controlled live from a control page.
+events, configured from a properties panel and controlled live from a control page.
 
 The spec has three parts:
 
 1. **The document**: what the HTML file may contain.
 2. **The runtime**: the `Overlaify` SDK the overlay talks to, and the events it receives.
-3. **The manifest**: a JSON block in which the overlay declares its settings and live actions.
+3. **The manifest**: a JSON block in which the overlay declares its properties and live actions.
 
 `src/lib/validate.js` checks an overlay against this spec. Each rule below names the code it reports.
 **Errors** break the overlay on Overlaify and must be fixed. **Warnings** are quality problems.
@@ -48,7 +48,7 @@ Overlaify.on(type, handler)           subscribe; returns an unsubscribe function
 Overlaify.off(type, handler)
 Overlaify.queue(handler, { gap })     returns enqueue(event); runs handler one event at a time. handler may be
                                       async or return ms to wait. Use it for alerts so they never overlap.
-Overlaify.param(key, fallback)        a setting's value; number and boolean fallbacks coerce the type.
+Overlaify.param(key, fallback)        a property's value; number and boolean fallbacks coerce the type.
 Overlaify.action(name, fn)            handle a manifest action; fn(value, event) gets the action's input value.
 Overlaify.dispatch(name, value?)      run an action from the overlay's own code (e.g. a chat command).
 Overlaify.escape(str)                 HTML-escape.
@@ -93,7 +93,7 @@ for each source. Subscribing to any other name is reported as `unknown_event` (w
 
 ### Where values come from
 
-- **Settings** saved by the streamer arrive as `window.OVERLAIFY_CONFIG`. URL query parameters override them.
+- **Properties** saved by the streamer arrive as `window.OVERLAIFY_CONFIG`. URL query parameters override them.
   Both are read with `Overlaify.param`.
 - Reserved keys, always provided by the platform: `channel`, `sources`, `volume`, `mute`, `test`.
 - **Sources** say where events come from: `OVERLAIFY_CONFIG.sources`, a list of `{ platform, channel }`,
@@ -108,7 +108,7 @@ The overlay declares itself in a JSON block in `<head>`, before its own scripts:
 <script type="application/json" id="overlaify-manifest">
 {
   "spec": 1,
-  "settings": [ ... ],
+  "properties": [ ... ],
   "actions": [ ... ]
 }
 </script>
@@ -116,17 +116,18 @@ The overlay declares itself in a JSON block in `<head>`, before its own scripts:
 
 | Rule | Code |
 |---|---|
-| Overlays that read settings or handle actions have a manifest. Without one, the streamer gets no settings panel or keys. | `manifest_missing` (warning) |
+| Overlays that read properties or handle actions have a manifest. Without one, the streamer gets no properties panel or keys. | `manifest_missing` (warning) |
 | At most one manifest block. | `manifest_duplicate` |
 | `type="application/json"`, so the browser does not run it. | `manifest_type` |
 | Valid JSON object: double quotes, no comments, no trailing commas. | `manifest_json` |
 | `"spec": 1`. | `spec_missing` (warning), `spec_version` |
-| `settings` and `actions` are arrays when present. | `manifest_shape` |
+| `properties` and `actions` are arrays when present. | `manifest_shape` |
+| `properties` was called `settings` before; an old manifest with `settings` and no `properties` still works. | `manifest_settings` (warning) |
 | No other top-level keys. | `manifest_unknown_key` (warning) |
 
-### Settings
+### Properties
 
-Settings are the overlay's starting state. The streamer edits them in a panel; the overlay reads each one with
+Properties are the overlay's starting state. The streamer edits them in a panel; the overlay reads each one with
 `Overlaify.param(key, fallback)`, using the manifest's default as the fallback.
 
 ```json
@@ -136,12 +137,12 @@ Settings are the overlay's starting state. The streamer edits them in a panel; t
 
 | Field | Rule | Code |
 |---|---|---|
-| `key` | Required. Letters, digits, `_` or `-`, starting with a letter, at most 40 characters. Unique. | `setting_key`, `setting_duplicate` |
-| | Not a reserved key (`channel`, `volume`, `mute`, `test`). | `setting_reserved` |
-| `label` | Short name shown in the panel. | `setting_label` (warning) |
-| `type` | `text`, `number`, `toggle`, `color`, `select`, `segmented` or `range`. | `setting_type` |
-| `default` | Required, and matching the type (see below). | `setting_default_missing` (warning), `setting_default` |
-| `desc`, `group` | Optional strings. `group` puts settings under a heading; use groups once there are more than about 4 settings. | `setting_field` (warning) |
+| `key` | Required. Letters, digits, `_` or `-`, starting with a letter, at most 40 characters. Unique. | `property_key`, `property_duplicate` |
+| | Not a reserved key (`channel`, `volume`, `mute`, `test`). | `property_reserved` |
+| `label` | Short name shown in the panel. | `property_label` (warning) |
+| `type` | `text`, `number`, `toggle`, `color`, `select`, `segmented` or `range`. | `property_type` |
+| `default` | Required, and matching the type (see below). | `property_default_missing` (warning), `property_default` |
+| `desc`, `group` | Optional strings. `group` puts properties under a heading; use groups once there are more than about 4 properties. | `property_field` (warning) |
 
 By type:
 
@@ -150,17 +151,17 @@ By type:
 | `text` | string | — |
 | `number` | number | — |
 | `toggle` | boolean; read with a boolean fallback | — |
-| `color` | `#rrggbb` | `swatches`: optional array of `#rrggbb` presets (`setting_swatches`) |
-| `select` | one of the option values | `options`: non-empty array (`setting_options`) |
-| `segmented` | one of the option values | `options`: 2–4 short choices (`setting_options`; more than 4 is a warning) |
-| `range` | number within `min`–`max` | `min` and `max` required, `min < max`, `step > 0`, optional `unit` (`setting_range`) |
+| `color` | `#rrggbb` | `swatches`: optional array of `#rrggbb` presets (`property_swatches`) |
+| `select` | one of the option values | `options`: non-empty array (`property_options`) |
+| `segmented` | one of the option values | `options`: 2–4 short choices (`property_options`; more than 4 is a warning) |
+| `range` | number within `min`–`max` | `min` and `max` required, `min < max`, `step > 0`, optional `unit` (`property_range`) |
 
 Options are plain values (`"subs"`) or `{ "value": "subs", "label": "Subs" }`.
 
 Consistency with the code:
 
-- Every setting is read with `Overlaify.param('key', …)`. → `setting_unused` (warning)
-- Every `Overlaify.param('key', …)`, other than reserved keys, is declared as a setting. → `param_undeclared` (warning)
+- Every property is read with `Overlaify.param('key', …)`. → `property_unused` (warning)
+- Every `Overlaify.param('key', …)`, other than reserved keys, is declared as a property. → `param_undeclared` (warning)
 
 ### Actions
 
@@ -174,7 +175,7 @@ or toggled scenes.
 
 | Field | Rule | Code |
 |---|---|---|
-| `name` | Required, same format as setting keys, unique. | `action_name`, `action_duplicate` |
+| `name` | Required, same format as property keys, unique. | `action_name`, `action_duplicate` |
 | `label` | The key's text. | `action_label` (warning) |
 | `group` | Optional heading. | `action_field` (warning) |
 | `style` | `primary` (default), `secondary` (less used half of a pair) or `danger` (resets and clears). | `action_style` |
@@ -191,6 +192,6 @@ Consistency with the code:
 
 ## Versioning
 
-This is spec version 1. Additions that old overlays can ignore (new event types, new setting types, new
+This is spec version 1. Additions that old overlays can ignore (new event types, new property types, new
 optional fields) keep the version number. Changes that would break an existing overlay raise it and
 get a new SDK URL (`/sdk/v2/…`); `/sdk/v1/overlaify.js` stays as it is for v1 overlays.

@@ -7,12 +7,12 @@ argument-hint: "[describe the overlay you want]"
 # Overlaify overlays
 
 An Overlaify overlay is one HTML file that runs as an OBS Browser Source (1920×1080, transparent). It gets
-Twitch events from the Overlaify SDK and declares its settings and live control keys in a JSON manifest.
+Twitch events from the Overlaify SDK and declares its properties and live control keys in a JSON manifest.
 Following the spec is what makes it work in OBS, in `overlaify dev`, and on overlaify.com without changes.
 
 The full rules are in `references/overlay-spec.md`. Read it before writing your first overlay in a session.
 `examples/` has three overlays that pass the spec: an alert queue (`neon-alert.html`), a chat box
-(`chat-stack.html`) and a goal with settings and actions (`goal-bar.html`).
+(`chat-stack.html`) and a goal with properties and actions (`goal-bar.html`).
 
 ## Workflow
 
@@ -24,11 +24,11 @@ The full rules are in `references/overlay-spec.md`. Read it before writing your 
    reason not to, and say what it is. Repeat until it passes.
 4. **Preview.** Suggest that the user run `npx overlaify dev <file>.html`. It is a long-running server, so
    start it in the background if you run it yourself. It prints:
-   - a dev page with the preview, event buttons (follow, sub, gift, bits, raid, chat), the settings panel
+   - a dev page with the preview, event buttons (follow, sub, gift, bits, raid, chat), the properties panel
      and the action keys;
    - an OBS URL (`http://localhost:4545/overlay`) to add as a Browser source at 1920×1080. It reloads
      when the file is saved, and the action keys reach it live.
-   Tell the user to set their Twitch channel in the dev page's settings so real chat and events arrive.
+   Tell the user to set their Twitch channel in the dev page's properties so real chat and events arrive.
 5. **Publish (only when the user asks).** `npx overlaify publish <file>.html --private` or `--public` puts it
    on overlaify.com at `/<their username>/<name>` with a hosted OBS URL (named after the file, e.g. `my-alert.html` → `my-alert`; `--name` sets another). Ask the user which one they want; never pick for
    them. Private: only they can open it on the site, but the OBS URL still works. Public: anyone with a link
@@ -58,7 +58,7 @@ local file with `?channel=<twitch name>` added.
 - Never insert viewer text as HTML. Use `textContent`, `Overlaify.escape()`, or
   `Overlaify.renderMessage(text, emotes)` for chat with emotes.
 - Manifest in `<head>`: `<script type="application/json" id="overlaify-manifest">{ "spec": 1, ... }</script>`.
-  - Every customizable value is a **setting**, read with `Overlaify.param('key', <same default>)`.
+  - Every customizable value is a **property**, declared under `"properties"` and read with `Overlaify.param('key', <same default>)`.
   - Every **action** has a handler, `Overlaify.action('name', fn)`. Add actions only for live state
     (timers, counters, goals, queues, scenes): pause/resume, add/remove, reset with `"style": "danger"` and
     `"confirm": true`.
@@ -85,4 +85,5 @@ otherwise:
 ## Changing an existing overlay
 
 Edit the file in place and keep everything that wasn't asked to change. When behavior changes, update the
-manifest too (new settings, renamed actions), then validate again.
+manifest too (new properties, renamed actions), then validate again. If its manifest still says `"settings"`,
+rename that key to `"properties"`.

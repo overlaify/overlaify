@@ -23,13 +23,13 @@ The dev page at `http://localhost:4545/` has:
 
 - a preview of the overlay at 1920×1080;
 - buttons that fire follow, sub, gift, bits, raid and chat events;
-- a settings panel built from the overlay's manifest, with your Twitch channel;
+- a properties panel built from the overlay's manifest, with your Twitch channel;
 - the overlay's action keys (pause, add, reset…);
 - the spec check.
 
 Add `http://localhost:4545/overlay` to OBS as a Browser source (1920×1080). It gets real Twitch chat and
 events from your channel, the action keys reach it live, and it reloads whenever you save the file.
-Settings are saved in `.overlaify/<name>.json` next to the file.
+Properties are saved in `.overlaify/<name>.json` next to the file.
 
 Options: `--port`, `--channel <twitch name>`, and `--host 0.0.0.0` to reach it from a second streaming PC.
 
@@ -49,7 +49,7 @@ npx overlaify publish my-alert.html --name neon # its address: overlaify.com/<yo
 The overlay must pass the spec. It gets its own page at `overlaify.com/<your username>/<name>`. The first publish
 names it after the file (`my-alert.html` → `my-alert`) and lets you change that at the prompt; `--name` sets it
 up front, shows up in My overlays with its OBS URL, and the
-settings you chose in `overlaify dev` come with it. Which overlay a file was published as is kept in
+properties you chose in `overlaify dev` come with it. Which overlay a file was published as is kept in
 `.overlaify/<name>.publish.json`.
 
 - **Private**: only you can open it on overlaify.com. Its OBS URL still works.
@@ -72,7 +72,7 @@ Saves the overlay at `overlaify.com/<user>/<name>` as a file that runs on its ow
 ready for `overlaify dev`. It won't overwrite a file unless you pass `--force`. Anyone can download a public
 overlay. A private one only downloads for its owner: log in first with `overlaify login`, or you get told to.
 
-For your own overlay its saved settings come along in `.overlaify/<name>.json`, and the file is linked to the
+For your own overlay its saved properties come along in `.overlaify/<name>.json`, and the file is linked to the
 overlay, so `overlaify publish` adds your changes to it as a new version.
 
 ## The spec in one minute
@@ -80,13 +80,13 @@ overlay, so `overlaify publish` adds your changes to it as a new version.
 - One self-contained HTML file, at most 80 KB, with a transparent 1920×1080 canvas.
 - It loads only `https://www.overlaify.com/sdk/v1/overlaify.js`.
 - Events come from the SDK: `Overlaify.on('sub', fn)`, `Overlaify.queue(fn)` for alerts.
-- A JSON manifest declares the overlay's settings (read them with `Overlaify.param`) and its live actions
+- A JSON manifest declares the overlay's properties (read them with `Overlaify.param`) and its live actions
   (handle them with `Overlaify.action`):
 
 ```html
 <script type="application/json" id="overlaify-manifest">
 { "spec": 1,
-  "settings": [{ "key": "color", "label": "Color", "type": "color", "default": "#c6ff3d" }],
+  "properties": [{ "key": "color", "label": "Color", "type": "color", "default": "#c6ff3d" }],
   "actions":  [{ "name": "reset", "label": "Reset", "style": "danger", "confirm": true }] }
 </script>
 ```
