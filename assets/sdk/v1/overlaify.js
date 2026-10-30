@@ -13,7 +13,7 @@
  *     ?test=1         emit random simulated events (for previews)
  *     ?mute=1         silence Overlaify.chime()
  *     anything else   read with Overlaify.param(name, fallback)
- *   Settings saved for an installed overlay arrive as window.OVERLAIFY_CONFIG and act as defaults.
+ *   Properties saved for an installed overlay arrive as window.OVERLAIFY_CONFIG and act as defaults.
  *   window.OVERLAIFY_LIVE = { room } (set by /o/:id) connects it to its live control page, /c/:room,
  *   whose action keys arrive as Overlaify.dispatch(name, value, { live: true }). Previews in a frame don't connect.
  *
@@ -22,19 +22,19 @@
  *   Lifecycle: connected, disconnected  ({ platform, channel })
  *
  *   An overlay can describe itself in <script type="application/json" id="overlaify-manifest">:
- *     { "settings": [{ key, label, type: text|number|color|toggle|select|segmented|range, default, desc?, group?,
+ *     { "properties": [{ key, label, type: text|number|color|toggle|select|segmented|range, default, desc?, group?,
  *                      options? (select/segmented: values or { value, label }), min?, max?, step?, unit? (range),
  *                      swatches? (color: preset hex colors) }],
  *       "actions":  [{ name, label, group?, style?: primary|secondary|danger, confirm?: true|text, wide?,
  *                      input?: { type: number|text|select, label, default, min?, max?, step?, options? } }] }
- *   Settings are its starting state (read them with Overlaify.param). Actions change that state while it
+ *   Properties are its starting state (read them with Overlaify.param). Actions change that state while it
  *   runs: Overlaify.action('pause', fn) handles one, Overlaify.dispatch('pause') runs it (e.g. from chat).
  */
 (function () {
   'use strict';
   if (window.Overlaify) return;
 
-  // Saved settings (window.OVERLAIFY_CONFIG, set by /o/:id) are the defaults; the URL's own params win.
+  // Saved properties (window.OVERLAIFY_CONFIG, set by /o/:id) are the defaults; the URL's own params win.
   // Structured config (sources) stays out of params.
   var params = new URLSearchParams(location.search);
   var saved = window.OVERLAIFY_CONFIG || {};

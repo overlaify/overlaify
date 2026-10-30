@@ -16,7 +16,7 @@ Usage
   overlaify init --list                                  list the library templates
   overlaify validate <files...> [--json]                 check overlays against the spec (exit 1 on errors)
   overlaify dev [file] [--port 4545] [--channel name] [--host 127.0.0.1]
-                                                         preview with simulated events, settings and action keys;
+                                                         preview with simulated events, properties and action keys;
                                                          gives an OBS URL that reloads when you save
   overlaify login [--site url] [--no-browser] [--token t]
                                                          connect the CLI to your overlaify.com account
