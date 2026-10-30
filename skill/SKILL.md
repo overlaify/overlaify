@@ -59,12 +59,41 @@ local file with `?channel=<twitch name>` added.
   `Overlaify.renderMessage(text, emotes)` for chat with emotes.
 - Manifest in `<head>`: `<script type="application/json" id="overlaify-manifest">{ "spec": 1, ... }</script>`.
   - Every customizable value is a **property**, declared under `"properties"` and read with `Overlaify.param('key', <same default>)`.
-  - Every **action** has a handler, `Overlaify.action('name', fn)`. Add actions only for live state
-    (timers, counters, goals, queues, scenes): pause/resume, add/remove, reset with `"style": "danger"` and
-    `"confirm": true`.
+  - Every **action** has a handler: `actions.name` in the store for live state (below), otherwise
+    `Overlaify.action('name', fn)`. Add actions only for live state (timers, counters, goals, queues,
+    scenes): pause/resume, add/remove, reset with `"style": "danger"` and `"confirm": true`.
   - Never declare `channel`, `volume`, `mute` or `test`; the platform provides them.
-- Wrap `localStorage` in `try/catch` (the page runs sandboxed), and use it when an action's state should
-  survive an OBS refresh.
+- **Live state goes in one store** so it survives an OBS refresh. Scores, counters, goal progress, timers,
+  rounds and players all count as live state; alerts, chat boxes and tickers don't need a store. Never use
+  `localStorage` for this: hosted overlays run sandboxed. See "State" in the spec.
+
+  ```js
+  const store = Overlaify.store({
+    version: 1,                                   // bump when the state's shape changes
+    state: () => ({ count: Overlaify.param('start', 0), endsAt: 0 }),
+    actions: {                                    // (state, value), one per manifest action
+      add: (s, n) => { s.count += Number(n) || 1; Overlaify.fx('bump'); },
+      start: s => { s.endsAt = Overlaify.now() + 60000; Overlaify.after(60000, 'end'); },
+      reset: s => { s.count = 0; }
+    },
+    events: {                                     // (state, event) by type; '*' gets the rest
+      sub: s => { store.actions.add(s, 5); },
+      chat(s, e) { if (e.isMod && e.message === '!reset') store.actions.reset(s); }
+    },
+    timers: { end: s => { s.endsAt = 0; } }       // run by Overlaify.after
+  });
+  store.render((s, prev) => { /* draw everything from s; prev is null the first time */ });
+  Overlaify.on('fx:bump', () => Overlaify.chime('pop'));
+  ```
+
+  - Handlers only change `s` (plain JSON) and stay pure. They don't touch the DOM. Use `Overlaify.now()` /
+    `Overlaify.random()`, not `Date.now()` / `Math.random()`, and `Overlaify.after(ms, name)`, not `setTimeout`.
+  - Store times as absolute timestamps (`endsAt`). `render` draws countdowns from `endsAt - Overlaify.now()`.
+  - `render` must draw any state from scratch, because a refresh starts from the saved state. Compare with
+    `prev` to choose an animation. Sounds and one-off effects go through `Overlaify.fx`.
+  - Handle chat commands in `events.chat`, never by calling `Overlaify.dispatch` from a listener.
+  - State is saved in `overlaify dev` and in local files. On overlaify.com it is kept in memory for now, so
+    don't promise the user it survives a refresh there yet.
 
 ## Making it look good
 
@@ -86,4 +115,5 @@ otherwise:
 
 Edit the file in place and keep everything that wasn't asked to change. When behavior changes, update the
 manifest too (new properties, renamed actions), then validate again. If its manifest still says `"settings"`,
-rename that key to `"properties"`.
+rename that key to `"properties"`. If it keeps live state in `localStorage` or in loose variables changed by
+`Overlaify.action` handlers, and the change touches that state, move the state into `Overlaify.store`.

@@ -1,8 +1,10 @@
 [
   {
     "slug": "neon-alert",
+    "handle": "overlaify",
+    "name": "neon-alert",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Neon Pulse Alerts",
     "kind": "Alert box",
     "tier": "free",
@@ -21,7 +23,8 @@
       "Built-in sounds with volume and mute controls",
       "Transparent 1920 × 1080 browser source"
     ],
-    "listedAt": "2026-10-28T14:00:41.475Z",
+    "listedAt": "2026-10-30T16:29:34.745Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Neon",
     "accent": "#c6ff3d",
     "crop": [
@@ -34,8 +37,10 @@
   },
   {
     "slug": "chat-stack",
+    "handle": "overlaify",
+    "name": "chat-stack",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Glass Chat Stack",
     "kind": "Chat",
     "tier": "free",
@@ -54,7 +59,8 @@
       "Hides bots and !commands",
       "Highlights bits sent with a message"
     ],
-    "listedAt": "2026-10-28T14:00:41.511Z",
+    "listedAt": "2026-10-30T16:29:38.200Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Frosted glass",
     "accent": "#9fd8ff",
     "crop": [
@@ -67,8 +73,10 @@
   },
   {
     "slug": "goal-bar",
+    "handle": "overlaify",
+    "name": "goal-bar",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Liquid Goal Bar",
     "kind": "Goal",
     "tier": "free",
@@ -87,7 +95,8 @@
       "Celebration state and sound when the goal is reached",
       "Transparent background, sits at the top of the scene"
     ],
-    "listedAt": "2026-10-28T14:00:41.530Z",
+    "listedAt": "2026-10-30T16:29:41.696Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Liquid fill",
     "accent": "#ff4f8b",
     "crop": [
@@ -100,8 +109,10 @@
   },
   {
     "slug": "starting-soon",
+    "handle": "overlaify",
+    "name": "starting-soon",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Starting Soon Countdown",
     "kind": "Scene",
     "tier": "free",
@@ -120,7 +131,8 @@
       "Animated background, or transparent with bg=0",
       "Full 1920 × 1080 scene, no image files needed"
     ],
-    "listedAt": "2026-10-28T14:00:41.611Z",
+    "listedAt": "2026-10-30T16:29:49.702Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Neon gradient",
     "accent": "#b48bff",
     "preview": "/assets/previews/starting-soon.png",
@@ -128,8 +140,10 @@
   },
   {
     "slug": "be-right-back",
+    "handle": "overlaify",
+    "name": "be-right-back",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Cozy BRB Screen",
     "kind": "Scene",
     "tier": "free",
@@ -148,7 +162,8 @@
       "Animated background, or transparent with bg=0",
       "Full 1920 × 1080 scene, no image files needed"
     ],
-    "listedAt": "2026-10-28T14:00:41.628Z",
+    "listedAt": "2026-10-30T16:29:53.602Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Coffee break",
     "accent": "#ffb547",
     "preview": "/assets/previews/be-right-back.png",
@@ -156,8 +171,10 @@
   },
   {
     "slug": "webcam-frame",
+    "handle": "overlaify",
+    "name": "webcam-frame",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Neon Webcam Frame",
     "kind": "Webcam frame",
     "tier": "free",
@@ -176,7 +193,8 @@
       "Transparent inside for your camera",
       "Works with any webcam or capture card"
     ],
-    "listedAt": "2026-10-28T14:00:41.645Z",
+    "listedAt": "2026-10-30T16:29:57.160Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Neon",
     "accent": "#c6ff3d",
     "crop": [
@@ -189,8 +207,10 @@
   },
   {
     "slug": "subathon-timer",
+    "handle": "overlaify",
+    "name": "subathon-timer",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Subathon Timer",
     "kind": "Timer",
     "tier": "free",
@@ -209,7 +229,8 @@
       "Optional maximum length cap",
       "Floating “+time” with the supporter’s name"
     ],
-    "listedAt": "2026-10-28T14:00:41.663Z",
+    "listedAt": "2026-10-30T16:30:01.024Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Clean HUD",
     "accent": "#5ce1ff",
     "crop": [
@@ -222,8 +243,10 @@
   },
   {
     "slug": "emote-wall",
+    "handle": "overlaify",
+    "name": "emote-wall",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Emote Wall",
     "kind": "Chat effect",
     "tier": "free",
@@ -242,7 +265,8 @@
       "Adjustable emote size and lifetime",
       "Transparent full-screen browser source"
     ],
-    "listedAt": "2026-10-28T14:00:41.680Z",
+    "listedAt": "2026-10-30T16:30:04.821Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Emote chaos",
     "accent": "#ff6b4a",
     "preview": "/assets/previews/emote-wall.png",
@@ -250,8 +274,10 @@
   },
   {
     "slug": "death-counter",
+    "handle": "overlaify",
+    "name": "death-counter",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Death Counter",
     "kind": "Counter",
     "tier": "free",
@@ -270,7 +296,8 @@
       "Shake animation and sound on every death",
       "Run several counters at once"
     ],
-    "listedAt": "2026-10-28T14:00:41.699Z",
+    "listedAt": "2026-10-30T16:30:09.524Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Gamer HUD",
     "accent": "#ff4f8b",
     "crop": [
@@ -283,8 +310,10 @@
   },
   {
     "slug": "newsroom-ticker",
+    "handle": "overlaify",
+    "name": "newsroom-ticker",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "Breaking News Ticker",
     "kind": "Ticker",
     "tier": "free",
@@ -302,7 +331,8 @@
       "Seamless loop with no gaps",
       "Adjustable speed and story count"
     ],
-    "listedAt": "2026-10-28T14:00:41.902Z",
+    "listedAt": "2026-10-30T16:30:58.819Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Breaking news",
     "accent": "#ff5c66",
     "crop": [
@@ -315,8 +345,10 @@
   },
   {
     "slug": "hug-command",
+    "handle": "overlaify",
+    "name": "hug-command",
     "official": true,
-    "author": "Dev User (google)",
+    "author": "Overlaify",
     "title": "!hug Blob Hugs",
     "kind": "Chat command",
     "tier": "free",
@@ -334,7 +366,8 @@
       "Optional per-chatter cooldown",
       "Rename the command"
     ],
-    "listedAt": "2026-10-28T14:00:41.954Z",
+    "listedAt": "2026-10-30T16:31:11.249Z",
+    "avatar": "/api/avatar/j9n2Ac4TaVEq?v=mvs9zhqn",
     "style": "Cute",
     "accent": "#ff7eb6",
     "crop": [

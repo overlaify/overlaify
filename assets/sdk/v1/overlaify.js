@@ -29,6 +29,9 @@
  *                      input?: { type: number|text|select, label, default, min?, max?, step?, options? } }] }
  *   Properties are its starting state (read them with Overlaify.param). Actions change that state while it
  *   runs: Overlaify.action('pause', fn) handles one, Overlaify.dispatch('pause') runs it (e.g. from chat).
+ *
+ *   State that should survive a refresh goes in a store: Overlaify.store({ version, state, actions, events,
+ *   timers }) runs the matching handler for every action and event, and store.render(fn) redraws after each change.
  */
 (function () {
   'use strict';
@@ -116,7 +119,10 @@
     // opts.wildcard === false keeps the event from '*' (it duplicates one '*' already got).
     emit: function (type, data, opts) {
       var ev = Object.assign({ type: type, id: uid(), timestamp: Date.now(), user: '', name: '', color: null }, data || {});
-      var own = type === 'connected' || type === 'disconnected' || type.indexOf('action:') === 0 || (opts && opts.wildcard === false);
+      var own = type === 'connected' || type === 'disconnected' || type.indexOf('action:') === 0 || type.indexOf('fx:') === 0 ||
+        (opts && opts.wildcard === false);
+      // The store handles every platform event and action first, so listeners read the new state.
+      if (store && isInput(type)) store._apply(ev, !own);
       var fns = (listeners[type] || []).concat(own ? [] : (listeners['*'] || []));
       fns.forEach(function (fn) { try { fn(ev); } catch (e) { console.error('[overlaify] handler error', e); } });
       return ev;
@@ -184,8 +190,203 @@
     },
     dispatch: function (name, value, extra) {
       return O.emit('action:' + name, Object.assign({ value: value }, extra || {}));
+    },
+
+    // Live state: store({ version, state, actions, events, timers }). See "State store" below.
+    store: function (def) {
+      if (store) throw new Error('[overlaify] Overlaify.store can only be called once');
+      store = makeStore(def || {});
+      return store.api;
+    },
+
+    // Inside a store handler these follow the event being handled, so the same events give the same state
+    // wherever they run. Elsewhere (rendering) they are the local clock and plain randomness.
+    now: function () { return run ? run.now : Date.now(); },
+    random: function () { return run ? nextRandom(run.meta) : Math.random(); },
+    // A one-shot effect: Overlaify.on('fx:<name>', e => …) gets { data } once the change is applied.
+    fx: function (name, data) {
+      if (run) run.fx.push([String(name), data]);
+      else O.emit('fx:' + name, { data: data });
+    },
+    // Runs store.timers[name](state, data) ms from now (state handlers only; the plan is part of the state).
+    after: function (ms, name, data) {
+      if (!run) return console.warn('[overlaify] Overlaify.after only works inside a store handler');
+      run.meta.schedule.push({ at: run.now + Math.max(0, Number(ms) || 0), name: String(name), data: data === undefined ? null : data });
+      run.meta.schedule.sort(function (a, b) { return a.at - b.at; });
+    },
+    cancel: function (name) {
+      if (!run) return console.warn('[overlaify] Overlaify.cancel only works inside a store handler');
+      run.meta.schedule = run.meta.schedule.filter(function (s) { return s.name !== name; });
     }
   };
+
+  /* ------------------------------------------------------------------ */
+  /* State store                                                         */
+  /* ------------------------------------------------------------------ */
+  // One JSON state per overlay, changed only by its handlers, grouped like the manifest:
+  //   Overlaify.store({
+  //     version: 1,                       bump when the state's shape changes; older saves are dropped
+  //     state: () => ({ … }),             the starting state (may read Overlaify.param)
+  //     actions: { add(s, value, ev) },   one per manifest action
+  //     events:  { chat(s, ev), '*'(s, ev) },  platform events; '*' gets those without their own handler
+  //     timers:  { roundEnd(s, data) }    run by Overlaify.after(ms, 'roundEnd', data)
+  //   })
+  // Handlers change `s` in place (or return a new state) and stay pure, so the same events give the same
+  // state wherever they run: no DOM, and Overlaify.now() / random() instead of Date.now() / Math.random().
+  // Effects are declared with Overlaify.fx(name, data) and fire after the change. A handler that throws
+  // changes nothing. store.render(fn) calls fn(state, prev) now and after every change.
+  //
+  // Saved between loads in window.OVERLAIFY_STATE (injected by the host) or localStorage; previews,
+  // test mode and sandboxed pages without storage keep it in memory only.
+  var store = null;
+  var run = null; // the handler run in progress: { now, meta, fx }
+
+  // Everything but the SDK's own signals goes to the store, so event types a new platform adds to the
+  // spec flow in without changing the SDK or the overlay.
+  function isInput(type) {
+    return type !== 'connected' && type !== 'disconnected' && type !== '*' &&
+      type.indexOf('fx:') !== 0 && type.indexOf('timer:') !== 0;
+  }
+
+  function clone(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+
+  // mulberry32: small seeded PRNG whose whole state is one number, so it lives in the snapshot.
+  function nextRandom(meta) {
+    var t = (meta.rng = (meta.rng + 0x6D2B79F5) | 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  function stateBackend() {
+    var key = 'overlaify:state:' + ((window.OVERLAIFY_LIVE && window.OVERLAIFY_LIVE.room) || location.pathname) + ':' + O.channel;
+    var memory = { load: function () { return window.OVERLAIFY_STATE || null; }, save: function () {} };
+    if (inFrame || O.isTest) return { load: function () { return null; }, save: function () {} };
+    try {
+      localStorage.setItem(key + ':probe', '1');
+      localStorage.removeItem(key + ':probe');
+    } catch (e) { return memory; } // sandboxed /o/:id: no storage yet
+    return {
+      load: function () {
+        try { return JSON.parse(localStorage.getItem(key)) || window.OVERLAIFY_STATE || null; } catch (e) { return null; }
+      },
+      save: function (snap) {
+        try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) { /* full or blocked */ }
+      }
+    };
+  }
+
+  function makeStore(def) {
+    var version = def.version == null ? 1 : def.version;
+    var actions = def.actions || {}, events = def.events || {}, timers = def.timers || {};
+    var backend = stateBackend();
+    var subs = [];
+    var timer = null, saveTimer = null;
+    var data, meta;
+
+    // The handler for an input, or null. '*' only gets what reaches Overlaify.on('*') (bits once, as cheer).
+    function handlerFor(type, wildcard) {
+      if (type.indexOf('action:') === 0) return own(actions, type.slice(7));
+      if (type.indexOf('timer:') === 0) return own(timers, type.slice(6));
+      return own(events, type) || (wildcard ? own(events, '*') : null);
+    }
+    function own(group, name) { return Object.prototype.hasOwnProperty.call(group, name) ? group[name] : null; }
+
+    // Runs fn with Overlaify.now/random/fx/after bound to this change.
+    function within(m, now, fx, fn) {
+      var outer = run;
+      run = { now: now, meta: m, fx: fx };
+      try { return fn(); } finally { run = outer; }
+    }
+
+    function fresh() {
+      var m = { rng: (Math.random() * 4294967296) | 0, schedule: [], seq: 0 };
+      var init = within(m, Date.now(), [], function () { return typeof def.state === 'function' ? def.state() : def.state; });
+      return { data: clone(init === undefined ? {} : init), meta: m };
+    }
+
+    var saved = backend.load();
+    if (saved && saved.v === version && saved.meta) { data = saved.data; meta = saved.meta; }
+    else { var f = fresh(); data = f.data; meta = f.meta; }
+
+    function persist() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(flush, 300);
+    }
+    function flush() {
+      clearTimeout(saveTimer);
+      backend.save({ v: version, seq: meta.seq, data: data, meta: meta });
+    }
+    window.addEventListener('pagehide', flush);
+
+    // Runs the handler on a copy; one that throws leaves state, schedule and effects untouched.
+    function apply(ev, now, wildcard) {
+      var fn = handlerFor(ev.type, wildcard);
+      if (!fn) return;
+      var m = clone(meta), draft = clone(data), fx = [];
+      var input = Object.assign({}, ev);
+      var arg = ev.type.indexOf('action:') === 0 ? ev.value : ev.type.indexOf('timer:') === 0 ? ev.data : input;
+      var out;
+      try { out = within(m, now, fx, function () { return fn(draft, arg, input); }); } catch (e) {
+        console.error('[overlaify] store handler error on ' + ev.type, e);
+        return;
+      }
+      var prev = data;
+      data = clone(out === undefined ? draft : out);
+      m.seq++;
+      meta = m;
+      persist();
+      armTimer();
+      subs.slice().forEach(function (fn) { try { fn(data, prev); } catch (e) { console.error('[overlaify] subscriber error', e); } });
+      fx.forEach(function (f) { O.emit('fx:' + f[0], { data: f[1] }); });
+    }
+
+    // Due timers run in order, each at its own scheduled time, then the next one is armed.
+    function armTimer() {
+      clearTimeout(timer);
+      if (!meta.schedule.length) return;
+      timer = setTimeout(function () {
+        while (meta.schedule.length && meta.schedule[0].at <= Date.now()) {
+          var s = meta.schedule[0];
+          meta = Object.assign({}, meta, { schedule: meta.schedule.slice(1) });
+          apply({ type: 'timer:' + s.name, data: s.data, timestamp: s.at }, s.at);
+        }
+        armTimer();
+      }, Math.max(0, meta.schedule[0].at - Date.now()));
+    }
+    armTimer();
+
+    function subscribe(fn) {
+      subs.push(fn);
+      return function () { subs = subs.filter(function (f) { return f !== fn; }); };
+    }
+
+    return {
+      _apply: function (ev, wildcard) { apply(ev, ev.timestamp || Date.now(), wildcard); },
+      _handles: function (type) { return !!handlerFor(type, true); },
+      api: {
+        getState: function () { return data; },
+        // The handlers as plain functions, so one can call another: store.actions.reset(s).
+        actions: actions,
+        subscribe: subscribe,
+        // fn(state, prev) now (prev = null) and after every change.
+        render: function (fn) {
+          var off = subscribe(fn);
+          fn(data, null);
+          return off;
+        },
+        dispatch: function (name, value) { return O.dispatch(name, value); },
+        // Back to the starting state, dropping scheduled timers.
+        reset: function () {
+          var prev = data, f = fresh();
+          data = f.data; meta = f.meta;
+          flush();
+          armTimer();
+          subs.slice().forEach(function (fn) { fn(data, prev); });
+        }
+      }
+    };
+  }
 
   /* ------------------------------------------------------------------ */
   /* Simulation data                                                     */
@@ -374,7 +575,7 @@
       try { m = JSON.parse(e.data); } catch (err) { return; }
       if (!m || m.t !== 'action' || typeof m.name !== 'string') return;
       O.dispatch(m.name, m.value, { live: true });
-      ws.send(JSON.stringify({ t: 'acted', id: m.id, name: m.name, handled: (listeners['action:' + m.name] || []).length > 0 }));
+      ws.send(JSON.stringify({ t: 'acted', id: m.id, name: m.name, handled: hasHandler('action:' + m.name) }));
     };
     ws.onclose = function () {
       clearInterval(ping);
@@ -390,16 +591,21 @@
     var d = e.data;
     if (d && d.__overlaify === 'action' && typeof d.name === 'string') {
       O.dispatch(d.name, d.value);
-      if (e.source) e.source.postMessage({ __overlaify: 'acted', name: d.name, handled: (listeners['action:' + d.name] || []).length > 0 }, '*');
+      if (e.source) e.source.postMessage({ __overlaify: 'acted', name: d.name, handled: hasHandler('action:' + d.name) }, '*');
       return;
     }
     if (!d || d.__overlaify !== 'simulate' || typeof d.type !== 'string') return;
     O.simulate(d.type, d.data);
     // Tell the editor whether anything listened, so it can flag events this overlay ignores.
     var types = d.type === 'cheer' || d.type === 'tip' ? ['cheer', 'tip', '*'] : [d.type, '*'];
-    var handled = types.some(function (t) { return (listeners[t] || []).length > 0; });
+    var handled = types.some(hasHandler);
     if (e.source) e.source.postMessage({ __overlaify: 'simulated', type: d.type, handled: handled }, '*');
   });
+
+  // An action or event the store has a handler for counts as handled.
+  function hasHandler(type) {
+    return (listeners[type] || []).length > 0 || (!!store && store._handles(type));
+  }
 
   function startTestMode() {
     var weights = [['chat', 10], ['follow', 2], ['sub', 2], ['cheer', 2], ['gift', 1], ['giftbomb', .5], ['raid', .5]];

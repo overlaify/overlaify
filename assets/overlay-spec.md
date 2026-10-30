@@ -34,7 +34,9 @@ Guidelines (not checked):
 - The canvas is 1920×1080. `html` and `body`: `margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent`.
   Paint a full-screen background only for full scenes (Starting soon, BRB).
 - Never insert user text as raw HTML. Use `Overlaify.escape(str)` or `textContent`, and `Overlaify.renderMessage(text, emotes)` for chat with emotes.
-- Wrap `localStorage`/`sessionStorage` in `try/catch`: the page runs in a sandboxed, opaque origin.
+- Keep live state that should survive a refresh in the store (section 2, "State"), not in `localStorage`: hosted
+  overlays run in a sandboxed, opaque origin where storage throws. Wrap any other `localStorage`/`sessionStorage`
+  use in `try/catch`.
 - Animate with `transform` and `opacity`. Keep text readable over gameplay (contrast, outline or shadow, large sizes).
 
 ## 2. The runtime
@@ -59,6 +61,10 @@ Overlaify.simulate(type, overrides?)  emit a fake event (used by previews).
 Overlaify.channel                     Twitch channel login ('' in previews).
 Overlaify.sources                     the connected sources: [{ platform, channel, connected }].
 Overlaify.isTest                      true when random test events are running.
+Overlaify.store(def)                  the overlay's live state; see "State" below.
+Overlaify.now() / random()            in a store handler: the event's time / seeded randomness. Elsewhere: local.
+Overlaify.fx(name, data?)             a one-shot effect; Overlaify.on('fx:<name>', e => …) gets { data }.
+Overlaify.after(ms, name, data?)      in a store handler: run timers[name] later. Overlaify.cancel(name) drops it.
 ```
 
 ### Events
@@ -89,7 +95,8 @@ fire both `cheer` and `tip`. Handle `tip` in new overlays so they also count tip
 never both, or bits count twice (`cheer_and_tip`, warning). `'*'` gets Twitch bits once, as the `cheer`.
 
 Lifecycle events, not included in `'*'`: `connected`, `disconnected`, with `platform` and `channel`; they fire
-for each source. Subscribing to any other name is reported as `unknown_event` (warning).
+for each source. Besides those, `action:<name>` and `fx:<name>`, subscribing to any other name (or a store
+`events` handler for one) is reported as `unknown_event` (warning).
 
 ### Where values come from
 
@@ -99,6 +106,54 @@ for each source. Subscribing to any other name is reported as `unknown_event` (w
 - **Sources** say where events come from: `OVERLAIFY_CONFIG.sources`, a list of `{ platform, channel }`,
   plus `?channel=` as a Twitch source. One overlay can listen to several at once.
 - **Actions** come from the control page (`/c/:id`), the preview's keys, or `Overlaify.dispatch`.
+
+### State
+
+Overlays with live state (scores, counters, goals, timers, rounds, players) keep it in one store, so it
+survives an OBS refresh and the same file works in a browser, in `overlaify dev` and on Overlaify. Its handlers
+are grouped like the manifest:
+
+```js
+const store = Overlaify.store({
+  version: 1,                                   // bump when the state's shape changes; older saves are dropped
+  state: () => ({ count: Overlaify.param('start', 0), endsAt: 0 }),   // the starting state
+  actions: {                                    // (state, value, event), one per manifest action
+    add: (s, n) => { s.count += Number(n) || 1; Overlaify.fx('bump'); },
+    start: s => { s.endsAt = Overlaify.now() + 60000; Overlaify.after(60000, 'end'); },
+    reset: s => { s.count = 0; }
+  },
+  events: {                                     // (state, event), platform events by type
+    sub: s => { store.actions.add(s, 5); },      // handlers are plain functions and can call each other
+    chat(s, e) { if (e.isMod && e.message === '!reset') store.actions.reset(s); }
+  },
+  timers: {                                     // (state, data), run by Overlaify.after
+    end: s => { s.endsAt = 0; }
+  }
+});
+
+store.render((s, prev) => { /* draw s; prev is null the first time */ });
+Overlaify.on('fx:bump', () => Overlaify.chime('pop'));
+```
+
+- The store gets every event and action before `Overlaify.on` listeners. `events['*']` gets the events without
+  their own handler, as `Overlaify.on('*')` does: Twitch bits once, as `cheer`.
+- Handlers change `s` in place, or return a new state. They run on a copy: one that throws changes nothing.
+- **Handlers are pure.** No DOM, no network, and no `Date.now()` or `Math.random()`. Inside a handler,
+  `Overlaify.now()` is the event's time, `Overlaify.random()` is seeded and saved with the state, and
+  `Overlaify.fx()` fires once the change is applied. That way the same events give the same state wherever
+  they run. Outside handlers, as in `render`, `now()` and `random()` are the local clock and plain randomness.
+- Keep the state plain JSON (objects, arrays, numbers, strings, booleans). Store times as absolute
+  timestamps (`endsAt`) and draw countdowns from `endsAt - Overlaify.now()`.
+- Things that happen later are timers, not `setTimeout`: `Overlaify.after(ms, name, data)` in a handler runs
+  `timers[name]` at that time, also after a refresh. `Overlaify.cancel(name)` drops it.
+- `render(state, prev)` must draw any state from scratch, because a refresh starts from a saved state. Compare
+  with `prev` to pick an animation. Play sounds and one-off animations from `fx`, not from `render`.
+- Handle chat commands in `events.chat`. Don't call `Overlaify.dispatch` from listeners to change state.
+- `store` also has `getState()`, `subscribe(fn)` (no first call), `actions`, `dispatch(name, value)` and
+  `reset()` (back to the starting state).
+- One store per overlay. Overlays that don't call `Overlaify.store` work as before.
+- Today the state is saved in `localStorage` where the page has it (`overlaify dev`, a local file) and kept in
+  memory on hosted overlays. Saving on Overlaify itself is planned; overlays need no changes for it.
 
 ## 3. The manifest
 
@@ -185,7 +240,8 @@ or toggled scenes.
 
 Consistency with the code:
 
-- Every action has a handler, `Overlaify.action('name', fn)`. Otherwise its key does nothing. → `action_unhandled`
+- Every action has a handler: `Overlaify.action('name', fn)`, or `actions.name` in the store. Otherwise its key does
+  nothing. → `action_unhandled`
 - Every handler is declared in the manifest, unless it is only dispatched from the overlay's own code. → `action_undeclared` (warning)
 
 ---
