@@ -22,8 +22,11 @@
   .pill.warn { color: var(--warn); border-color: #6a4a1c; }
   #obs { margin-left: auto; color: var(--dim); font-size: 13px; }
   #obs.on { color: var(--ok); }
-  main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; padding: 20px; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  /* The page fits the window: the preview column and the tab panes scroll on their own. */
+  body { display: flex; flex-direction: column; height: 100vh; }
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; padding: 20px; }
+  main > div { min-height: 0; overflow-y: auto; }
+  @media (max-width: 900px) { body { display: block; height: auto; } main { grid-template-columns: 1fr; } main > div { overflow: visible; } }
   .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
     background: repeating-conic-gradient(#1b1924 0 25%, #14121b 0 50%) 0 0 / 32px 32px; }
   .stage.dark { background: #26222f; }
@@ -37,15 +40,22 @@
   button.danger { color: var(--err); }
   button.armed { background: var(--err); color: #0b0a10; }
   label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--dim); margin-left: 6px; }
-  aside { display: flex; flex-direction: column; gap: 16px; }
+  aside { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+  .tabbed { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  @media (max-width: 900px) { .tabbed { flex: none; } }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
   section h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); }
   section h3 { margin: 12px 0 6px; font-size: 12px; color: var(--dim); font-weight: 600; }
-  .issue { font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); }
-  .issue:first-of-type { border-top: 0; }
-  .issue code { font-size: 11px; color: var(--dim); }
-  .issue.err code { color: var(--err); }
-  .issue.warn code { color: var(--warn); }
+  .tabbed { padding: 0; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; color: var(--dim); padding: 11px 12px; font-size: 13px;
+    text-transform: uppercase; letter-spacing: .06em; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button:hover { color: var(--text); }
+  .tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+  .tabs button small { color: var(--dim); font-weight: 500; margin-left: 4px; }
+  .pane { padding: 14px; flex: 1; min-height: 0; overflow-y: auto; }
+  .pane[hidden] { display: none; }
+  .pane > h3:first-child { margin-top: 0; }
   .empty { color: var(--dim); font-size: 13px; margin: 0; }
   .keys { display: flex; flex-wrap: wrap; gap: 8px; }
   .act { display: flex; gap: 6px; align-items: center; }
@@ -87,17 +97,22 @@
     </div>
   </div>
   <aside>
-    <section><h2>Spec check</h2><div id="issues"></div></section>
-    <section><h2>Controls</h2><div id="actions"></div></section>
-    <section><h2>Properties</h2><div id="settings"></div></section>
-    <section>
-      <h2>Add to OBS</h2>
-      <div class="url"><input id="obsUrl" readonly><button id="copy">Copy</button></div>
-      <ol>
-        <li>OBS → Sources → + → Browser.</li>
-        <li>Paste the URL; width 1920, height 1080.</li>
-        <li>Controls and properties here reach it live; saving the file reloads it.</li>
-      </ol>
+    <section class="tabbed">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="settings">Properties</button>
+        <button role="tab" data-tab="actions">Controls</button>
+        <button role="tab" data-tab="obsTab">Add to OBS</button>
+      </div>
+      <div class="pane" id="settings" role="tabpanel"></div>
+      <div class="pane" id="actions" role="tabpanel"></div>
+      <div class="pane" id="obsTab" role="tabpanel">
+        <div class="url"><input id="obsUrl" readonly><button id="copy">Copy</button></div>
+        <ol>
+          <li>OBS → Sources → + → Browser.</li>
+          <li>Paste the URL; width 1920, height 1080.</li>
+          <li>Controls and properties here reach it live; saving the file reloads it.</li>
+        </ol>
+      </div>
     </section>
   </aside>
 </main>
@@ -144,19 +159,35 @@
     if (d.__overlaify === 'acted' && !d.handled) toast('No handler for “' + d.name + '” in the preview');
   });
 
+  /* ---------- tabs: properties | controls ---------- */
+  function showTab(name) {
+    [].forEach.call(document.querySelectorAll('.tabs button'), function (b) {
+      var on = b.dataset.tab === name;
+      b.classList.toggle('on', on); b.setAttribute('aria-selected', on);
+      $(b.dataset.tab).hidden = !on;
+    });
+    try { localStorage.setItem('overlaify-dev-tab', name); } catch (e) {}
+  }
+  [].forEach.call(document.querySelectorAll('.tabs button'), function (b) { b.onclick = function () { showTab(b.dataset.tab); }; });
+  var savedTab = null;
+  try { savedTab = localStorage.getItem('overlaify-dev-tab'); } catch (e) {}
+  showTab(savedTab === 'actions' || savedTab === 'obsTab' ? savedTab : 'settings');
+  // The Controls tab shows how many keys the overlay has.
+  function countTab(n) {
+    var b = document.querySelector('.tabs [data-tab=actions]');
+    b.textContent = 'Controls';
+    if (n) b.appendChild(el('small', null, String(n)));
+  }
+
   /* ---------- spec check ---------- */
   function renderIssues(check) {
-    var box = $('issues'); box.textContent = '';
     var spec = $('spec');
     spec.className = 'pill ' + (check.errors.length ? 'err' : check.warnings.length ? 'warn' : 'ok');
     spec.textContent = check.errors.length ? check.errors.length + ' error' + (check.errors.length > 1 ? 's' : '')
       : check.warnings.length ? 'Passes spec · ' + check.warnings.length + ' warning' + (check.warnings.length > 1 ? 's' : '') : 'Passes spec v1';
-    if (!check.errors.length && !check.warnings.length) return box.appendChild(el('p', 'empty', 'No problems. Ready for OBS and Overlaify.'));
-    check.errors.map(function (i) { return ['err', i]; }).concat(check.warnings.map(function (i) { return ['warn', i]; })).forEach(function (x) {
-      var row = box.appendChild(el('div', 'issue ' + x[0]));
-      row.appendChild(el('code', null, x[1].code + ' '));
-      row.appendChild(document.createTextNode(x[1].message));
-    });
+    // The issues themselves show on hover; `overlaify validate` prints them too.
+    spec.title = check.errors.concat(check.warnings).map(function (i) { return i.code + ': ' + i.message; }).join('\n')
+      || 'No problems. Ready for OBS and Overlaify.';
   }
 
   /* ---------- action keys ---------- */
@@ -183,6 +214,7 @@
   function renderActions(actions) {
     var box = $('actions'); box.textContent = '';
     actions = (actions || []).filter(function (a) { return a && a.name; });
+    countTab(actions.length);
     if (!actions.length) return box.appendChild(el('p', 'empty', 'No actions in the manifest.'));
     grouped(actions).forEach(function (g) {
       if (g.name) box.appendChild(el('h3', null, g.name));
