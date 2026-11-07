@@ -1,6 +1,6 @@
 {
   "name": "overlaify",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Build Twitch/OBS overlays that follow the Overlaify Overlay Spec: start from a template, validate, preview with simulated events and control them live.",
   "type": "module",
   "bin": {
