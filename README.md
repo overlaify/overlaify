@@ -22,7 +22,8 @@ npx overlaify skill                              # install the Claude skill
 The dev page at `http://localhost:4545/` has:
 
 - a preview of the overlay at 1920×1080;
-- buttons that fire follow, sub, gift, bits, raid and chat events;
+- buttons that fire follow, sub, gift, bits and raid events;
+- a text field and Send button for custom chat messages in the preview;
 - a properties panel built from the overlay's manifest, with your Twitch channel;
 - the overlay's action keys (pause, add, reset…);
 - the spec check.
