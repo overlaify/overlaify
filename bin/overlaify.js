@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
+import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { init, validate, installSkill, templates, bold, dim, green, red, yellow } from '../lib/commands.js';
+import { init, validate, installSkill, exportSkill, skillTargets, templates, bold, dim, green, red, yellow } from '../lib/commands.js';
 import { dev } from '../lib/dev.js';
 import { login, logout, whoami, publish, download, siteUrl } from '../lib/publish.js';
 
@@ -28,8 +29,11 @@ Usage
                                                          a private one needs its owner logged in
   overlaify whoami | logout [--site url]                 show / forget the connected account
   overlaify spec                                         print the Overlay Spec (Markdown)
-  overlaify skill [--dir path]                           install the Overlaify skill for Claude
-                                                         (default ~/.claude/skills/overlaify)`;
+  overlaify skill                                        choose a target interactively (Claude Code in scripts)
+  overlaify skill [--target <${[...skillTargets.keys()].join('|')}>] [--dir path]
+                                                         install the skill for the specified local agent
+  overlaify skill --target chatgpt [--output file.zip] [--force]
+                                                         export overlaify-skill.zip for upload to ChatGPT`;
 
 // --name value / --flag; everything else is positional.
 function parse(argv) {
@@ -37,8 +41,9 @@ function parse(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) { args.push(a); continue; }
-    const [k, v] = a.slice(2).split('=');
-    if (v !== undefined) opts[k] = v;
+    const equals = a.indexOf('=');
+    const k = a.slice(2, equals === -1 ? undefined : equals);
+    if (equals !== -1) opts[k] = a.slice(equals + 1);
     else if (argv[i + 1] && !argv[i + 1].startsWith('--') && !['force', 'list', 'json', 'help', 'public', 'private', 'new', 'no-browser'].includes(k)) opts[k] = argv[++i];
     else opts[k] = true;
   }
@@ -97,14 +102,50 @@ try {
   } else if (cmd === 'spec') {
     process.stdout.write(readFileSync(join(PKG, 'assets/overlay-spec.md'), 'utf8'));
   } else if (cmd === 'skill') {
-    const dir = installSkill({ dir: opts.dir });
-    console.log(`${green('Installed')} the Overlaify skill in ${dir}\nAsk Claude for a stream overlay and it will follow the spec and use this CLI.`);
+    if (args.length || opts.target === true) throw new Error('Use --target <agent>. Run overlaify skill --help for the available targets.');
+    const target = opts.target ?? await chooseSkillTarget(opts);
+    if (target === undefined) {
+      process.exitCode = 130;
+    } else if (target === 'chatgpt') {
+      if (opts.dir !== undefined) throw new Error('Use --output to choose the ChatGPT ZIP path.');
+      const file = exportSkill({ output: opts.output, force: opts.force });
+      console.log(`${green('Exported')} the Overlaify skill to ${file}\nUpload this ZIP in ChatGPT Skills if your workspace allows skill uploads.`);
+    } else {
+      if (opts.output !== undefined) throw new Error('--output is only for --target chatgpt. Use --dir for local installs.');
+      const dir = installSkill({ target, dir: opts.dir });
+      console.log(`${green('Installed')} the Overlaify skill for ${skillTargets.get(target).client} in ${dir}\nAsk for a stream overlay using the Overlaify skill.`);
+    }
   } else {
     throw new Error(`Unknown command "${cmd}". Run overlaify --help.`);
   }
 } catch (err) {
   console.error(red('Error: ') + err.message);
   process.exitCode = 1;
+}
+
+async function chooseSkillTarget({ dir, output }) {
+  if (dir !== undefined || output !== undefined || !process.stdin.isTTY || !process.stdout.isTTY) return 'claude';
+
+  const choices = [...skillTargets].map(([target, { client }]) => [target, client]);
+  choices.push(['chatgpt', 'ChatGPT (export an uploadable ZIP)']);
+  console.log('Choose an AI for the Overlaify skill:');
+  for (const [index, [, label]] of choices.entries()) console.log(`  ${index + 1}. ${label}`);
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout, prompt: 'Enter a number [1]: ' });
+  rl.on('SIGINT', () => rl.close());
+  try {
+    rl.prompt();
+    for await (const line of rl) {
+      const answer = line.trim();
+      const index = answer ? Number(answer) - 1 : 0;
+      if (/^\d*$/.test(answer) && choices[index]) return choices[index][0];
+      console.log(`Enter a number from 1 to ${choices.length}.`);
+      rl.prompt();
+    }
+  } finally {
+    rl.close();
+  }
+  console.log('\nSkill setup canceled.');
 }
 
 function onlyHtmlFile(cmd = 'dev') {

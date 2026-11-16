@@ -14,7 +14,8 @@ npx overlaify login                              # connect your overlaify.com ac
 npx overlaify publish my-alert.html              # publish it to My overlays (asks public or private)
 npx overlaify download alice/neon-alert          # save someone's overlay from overlaify.com as a local file
 npx overlaify spec                               # print the spec
-npx overlaify skill                              # install the Claude skill
+npx overlaify skill                              # choose an AI in the terminal
+npx overlaify skill --target chatgpt              # export a ZIP for ChatGPT Skills
 ```
 
 ## `overlaify dev`
@@ -108,10 +109,27 @@ store.render((s) => { document.getElementById('count').textContent = s.count; })
 
 `npx overlaify spec` prints the full spec.
 
-## Claude skill
+## AI skill
 
-`npx overlaify skill` installs a skill in `~/.claude/skills/overlaify`. After that, Claude Code can be asked
-for an overlay and will write it to the spec, validate it and preview it with this CLI.
+Run `npx overlaify skill` in a terminal to choose an AI from the menu. Press Enter for Claude Code.
+Pass `--target` to select an AI directly. Without a terminal or an explicit target, the CLI defaults
+to Claude Code.
+
+| Client | Command | Default destination |
+| --- | --- | --- |
+| Claude Code | `npx overlaify skill --target claude` | `~/.claude/skills/overlaify` |
+| Codex | `npx overlaify skill --target codex` | `~/.agents/skills/overlaify` |
+| Cursor | `npx overlaify skill --target cursor` | `~/.cursor/skills/overlaify` |
+| Gemini CLI | `npx overlaify skill --target gemini` | `~/.gemini/skills/overlaify` |
+| ChatGPT | `npx overlaify skill --target chatgpt` | `./overlaify-skill.zip` |
+
+Use `--dir <path>` to set the destination folder for a local install, including for other clients that load
+Agent Skills. A custom directory skips the menu. Ask the agent to use the Overlaify skill to build an
+overlay. Agents with shell access can validate and preview the overlay with the CLI.
+
+For ChatGPT, upload the ZIP from Skills in a workspace that allows skill uploads, then select `@overlaify`
+when asking for an overlay. Use `--output <file.zip>` to change the archive path and `--force` to replace an
+existing archive. See [ChatGPT workspace skill controls](https://learn.chatgpt.com/docs/enterprise/skills).
 
 ## Repository layout
 
@@ -120,7 +138,7 @@ bin/overlaify.js     the CLI entry
 lib/                 init / validate / dev / login / publish / download / skill commands, the dev page, a tiny WebSocket server
 lib/validate.js      the spec checker (synced from the site)
 assets/              the SDK, the Library templates and the spec (synced)
-skill/               the Claude skill: SKILL.md, plus the spec and three examples (synced)
+skill/               SKILL.md, plus the spec and three examples (synced)
 scripts/sync.mjs     refreshes the synced copies
 ```
 
@@ -130,6 +148,7 @@ another copy) and copies the rest from a checkout of the site (`../overlaify_web
 `OVERLAIFY_WEB=path`). `SKILL.md` and everything else is edited here.
 
 ```bash
+npm ci
 node bin/overlaify.js dev assets/templates/goal-bar.html   # run from the repo
 npm publish                                                # publish to npm
 ```

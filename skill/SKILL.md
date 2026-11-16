@@ -39,8 +39,9 @@ The full rules are in `references/overlay-spec.md`. Read it before writing your 
    `npx overlaify download <user>/<name> [file]` saves it as a local file to change, then carry on from step 3.
    A private one only downloads for its owner; if it says to log in, ask them to run `npx overlaify login`.
 
-If `npx` can't be used, the file still works: it loads the SDK from overlaify.com, so OBS can open it as a
-local file with `?channel=<twitch name>` added.
+If `npx` can't be used, start from a bundled example or write the HTML directly using the spec. Check it
+against the spec and give the user the HTML file and local validation and preview commands. OBS can also
+open the file directly with `?channel=<twitch name>` added because it loads the SDK from overlaify.com.
 
 ## Rules that matter most
 
